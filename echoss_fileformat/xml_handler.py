@@ -1,8 +1,8 @@
 from abstract_fileformat_handler import AbstractFileFormatHandler
 import xml.etree.ElementTree as ET
-
 import io
 import pandas as pd
+
 
 class XmlHandler(AbstractFileFormatHandler):
     def __init__(self):
@@ -34,4 +34,3 @@ class XmlHandler(AbstractFileFormatHandler):
 
     def dumps(self):
         return ET.tostring(self.tree.getroot(), encoding="unicode")
-
