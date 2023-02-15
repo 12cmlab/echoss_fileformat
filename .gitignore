@@ -33,6 +33,7 @@ var/
 
 # .idea
 .idea/
+.idea/*
 
 # Unit test / coverage reports
 htmlcov/
