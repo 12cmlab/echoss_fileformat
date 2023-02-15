@@ -10,11 +10,11 @@ class AbstractFileFormatHandler(metaclass=abc.ABCMeta):
         pass
 
     @abc.abstractmethod
-    def get(self, xpath):
+    def get_tree_path(self, xpath):
         pass
 
     @abc.abstractmethod
-    def update(self, xpath, new_data):
+    def set_tree_path(self, xpath, new_data):
         pass
 
     @abc.abstractmethod

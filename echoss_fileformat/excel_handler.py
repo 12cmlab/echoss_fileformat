@@ -15,13 +15,13 @@ class ExcelHandler(AbstractFileFormatHandler):
             file = io.BytesIO(string)
             self.data = pd.read_excel(file)
 
-        def get(self, content):
+        def get_tree_path(self, content):
             for row in self.data.iterrows():
                 if content in row:
                     return row
             return None
 
-        def update(self, content, new_data):
+        def set_tree_path(self, content, new_data):
             index = None
             for i, row in self.data.iterrows():
                 if content in row:
@@ -52,12 +52,12 @@ class ExcelFileFormatHandler2(AbstractFileFormatHandler):
         # Not supported in openpyxl
         raise NotImplementedError("ExcelFileFormatHandler does not support loads")
 
-    def get(self, path):
+    def get_tree_path(self, path):
         sheet_name, row_index, column_index = path
         sheet = self.workbook[sheet_name]
         return sheet.cell(row=row_index, column=column_index).value
 
-    def update(self, path, value):
+    def set_tree_path(self, path, value):
         sheet_name, row_index, column_index = path
         sheet = self.workbook[sheet_name]
         sheet.cell(row=row_index, column=column_index).value = value

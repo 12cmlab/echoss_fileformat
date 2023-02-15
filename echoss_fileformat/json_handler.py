@@ -8,19 +8,27 @@ import logging
 
 logger = logging.getLogger('echoss_fileformat')
 
+
 class JsonHandler(AbstractFileFormatHandler):
-    def __init__(self, json_type='object', encoding='utf-8', use_key=''):
+    TYPE_OBJECT = 'object'
+    TYPE_ARRAY = 'array'
+    TYPE_MULTILINE = 'multiline'
+    
+    def __init__(self, json_type=TYPE_OBJECT, encoding='utf-8', use_key=''):
         """Initialize json file format
         Args:
             json_type (str): 'object' for one object, 'multiline' for objects each lines, 'array' for array
-            use_node (str): if not empty, under the node name will be used. for example 'data'
+            use_key (str): if not empty, under the node name will be used. for example 'data'
         """
         self.data = None
+        self.error_data = None
         self.json_type = json_type
         self.encoding = encoding
         self.use_key = use_key
+        self.data_df = None
+        self.data_dirty = False
 
-    # 내부 함수
+    # 내부 함수 for multiline json_type
     def append_json_data(self, json_obj):
         if not self.use_key:
             self.data.append(json_obj)
@@ -29,8 +37,9 @@ class JsonHandler(AbstractFileFormatHandler):
         else:
             self.error_data.append(json_obj)
 
+    # 내부 함수 for object and array json_type
     def set_json_data(self, json_obj):
-        if self.json_type == 'object':
+        if self.json_type == JsonHandler.TYPE_OBJECT:
             if not self.use_key:
                 self.data = json_obj
             elif self.use_key in json_obj:
@@ -38,7 +47,7 @@ class JsonHandler(AbstractFileFormatHandler):
             else:
                 self.error_data.append(json_obj)
 
-        elif self.json_type == 'array':
+        elif self.json_type == JsonHandler.TYPE_ARRAY:
             if not self.use_key:
                 self.data = json_obj
             elif isinstance(json_obj, list):
@@ -50,14 +59,12 @@ class JsonHandler(AbstractFileFormatHandler):
         """
         Args:
             from_stream (file-like object): file or s3 stream object which support .read() function
-            encoding (str): only need in multiline file load,
-            **kwargs ():
 
         Returns:
             json object (dict) if json_type is 'object'
             array of dict if json_type is 'array' or 'multiline'
         """
-        if self.json_type == 'multiline':
+        if self.json_type == JsonHandler.TYPE_MULTILINE:
             self.data = []
             self.error_data = []
             if isinstance(from_stream, io.TextIOWrapper):
@@ -81,27 +88,27 @@ class JsonHandler(AbstractFileFormatHandler):
                         json_obj = json.loads(line_str)
                         self.append_json_data(json_obj)
                     except Exception as e:
-                        self.error_data.append(line_str)
+                        self.error_data.append(line_bytes)
                         logger.exception(e)
-        elif self.json_type == 'object':
+        elif self.json_type == JsonHandler.TYPE_OBJECT:
             self.data = None
             self.error_data = None
             try:
                 root_json = json.load(from_stream)
                 if type(root_json) == list:
-                    logger.error(f"given json type 'object' but is 'array'")
+                    logger.error(f"given json type {JsonHandler.TYPE_OBJECT} but is {JsonHandler.TYPE_ARRAY}")
                     self.error_data = root_json
                 else:
                     self.set_json_data(root_json)
             except Exception as e:
                 logger.exception(e)
-        elif self.json_type == 'array':
+        elif self.json_type == JsonHandler.TYPE_ARRAY:
             self.data = []
             self.error_data = None
             try:
                 root_json = json.load(from_stream)
                 if type(root_json) != list:
-                    logger.error(f"given json type 'array' but is 'object'")
+                    logger.error(f"given json type {JsonHandler.TYPE_ARRAY} but is {JsonHandler.TYPE_OBJECT}")
                     self.error_data = root_json
                 else:
                     self.set_json_data(root_json)
@@ -110,7 +117,7 @@ class JsonHandler(AbstractFileFormatHandler):
         return self.data
 
     def loads(self, from_string):
-        if self.json_type == 'multiline':
+        if self.json_type == JsonHandler.TYPE_MULTILINE:
             self.data = []
             self.error_data = []
             for i, line_str in enumerate(from_string):
@@ -120,25 +127,25 @@ class JsonHandler(AbstractFileFormatHandler):
                 except Exception as e:
                     self.error_data.append(line_str)
                     logger.exception(e)
-        elif self.json_type == 'object':
+        elif self.json_type == JsonHandler.TYPE_OBJECT:
             self.data = None
             self.error_data = None
             try:
                 root_json = json.loads(from_string)
                 if type(root_json) == list:
-                    logger.error(f"given json type 'object' but is 'array'")
+                    logger.error(f"given json type {JsonHandler.TYPE_OBJECT} but is {JsonHandler.TYPE_ARRAY}")
                     self.error_data = root_json
                 else:
                     self.set_json_data(root_json)
             except Exception as e:
                 logger.exception(e)
-        elif self.json_type == 'array':
+        elif self.json_type == JsonHandler.TYPE_ARRAY:
             self.data = []
             self.error_data = None
             try:
                 root_json = json.loads(from_string)
                 if type(root_json) != list:
-                    logger.error(f"given json type 'array' but is 'object'")
+                    logger.error(f"given json type {JsonHandler.TYPE_ARRAY} but is {JsonHandler.TYPE_OBJECT}")
                     self.error_data = root_json
                 else:
                     self.set_json_data(root_json)
@@ -146,14 +153,105 @@ class JsonHandler(AbstractFileFormatHandler):
                 logger.exception(e)
         return self.data
 
-    def get(self, xpath):
-        return self.data.get(xpath)
+    def get_tree_path(self, tree_path):
+        path_keys = [p for p in tree_path.split('/') if p]
+        if self.data:
+            json_obj = self.data
+            if JsonHandler.TYPE_OBJECT == self.json_type:
+                for key in path_keys:
+                    if key in json_obj:
+                        json_obj = json_obj[key]
+                    else:
+                        return None
+                return json_obj
+            elif JsonHandler.TYPE_ARRAY == self.json_type or JsonHandler.TYPE_MULTILINE == self.json_type:
+                results = []
+                json_list = self.data
+                for a in json_list:
+                    json_obj = a
+                    for key in path_keys:
+                        if key in json_obj:
+                            json_obj = json_obj[key]
+                        else:
+                            json_obj = None
+                            break
+                    if json_obj:
+                        results.append(json_obj)
+                return results
+        else:
+            logger.info(f"data is not exist")
 
-    def update(self, xpath, new_data):
-        self.data[xpath] = new_data
+        if JsonHandler.TYPE_OBJECT == self.json_type:
+            return None
+        else:
+            return []
+
+    def set_tree_path(self, tree_path, new_data):
+        set_count = 0
+        path_keys = [p for p in tree_path.split('/') if p]
+        if len(path_keys) == 0:
+            self.data = new_data
+            set_count += 1
+        elif self.data:
+            dict_obj = None
+            json_obj = self.data
+            if JsonHandler.TYPE_OBJECT == self.json_type:
+                for key in path_keys:
+                    if key in json_obj:
+                        dict_obj = json_obj
+                        json_obj = json_obj[key]
+                    else:
+                        dict_obj = None
+                        break
+                if dict_obj:
+                    dict_obj[path_keys[-1]] = new_data
+                    set_count += 1
+            elif JsonHandler.TYPE_ARRAY == self.json_type or JsonHandler.TYPE_MULTILINE == self.json_type:
+                json_list = self.data
+                for a in json_list:
+                    dict_obj = None
+                    json_obj = a
+                    for key in path_keys:
+                        if key in json_obj:
+                            dict_obj = json_obj
+                            json_obj = json_obj[key]
+                        else:
+                            dict_obj = None
+                            break
+                    if dict_obj:
+                        dict_obj[path_keys[-1]] = new_data
+                        set_count += 1
+        else:
+            logger.info(f"data is not exist")
+        if set_count > 0:
+            self.data_dirty = True
+            logger.info(f"set_tree_path modify [{set_count}] data")
 
     def dump(self, to_stream):
-        json.dump(self.data, to_stream)
+        if self.data:
+            json.dump(self.data, to_stream)
 
     def dumps(self):
-        return json.dumps(self.data)
+        if self.data:
+            return json.dumps(self.data)
+
+    # 'array' 나 'multiline' 유형으로 모두 같은 key:value 형태로 되어 있다고 가정
+    def to_pandas(self):
+        self.data_df = pd.DataFrame.from_dict(self.data)
+        return self.df
+
+    def to_csv(self, filename):
+        if self.data:
+            if self.data_dirty or not self.data_df:
+                self.to_pandas()
+                self.data_dirty = False
+
+            if self.data_df:
+                self.data_df.to_csv(filename, encoding=self.encoding, index=False)
+
+
+
+
+
+
+
