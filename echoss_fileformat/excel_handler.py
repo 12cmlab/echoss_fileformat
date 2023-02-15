@@ -8,12 +8,20 @@ class ExcelHandler(AbstractFileFormatHandler):
     def __init__(self):
         self.data_df = pd.DataFrame()
 
-    def load(self, stream, sheet_name=0):
-        self.data_df = pd.read_excel(stream, sheet_name=sheet_name)
+    def load(self, from_stream, sheet_name=0, header=0, skiprows=0, nrows=None, usecols=None):
+        self.data_df = pd.read_excel(
+            from_stream,
+            sheet_name=sheet_name,
+            header=header,
+            skiprows=skiprows,
+            nrows=nrows,
+            usecols=usecols
+        )
+        return self.data_df
 
-    def loads(self, string):
-        file = io.BytesIO(string)
-        self.data_df = pd.read_excel(file, sheet_name=[])
+    def loads(self, from_string, sheet_name=0, header=0, skiprows=0, nrows=None, usecols=None):
+        file = io.BytesIO(from_string)
+        return self.load(file, sheet_name, header, skiprows, nrows, usecols)
 
     def get_tree_path(self, tree_path):
         if self.data_df:
