@@ -20,14 +20,14 @@ class CsvHandler(AbstractFileFormatHandler):
         stream = io.StringIO(from_string)
         return self.load(stream)
 
-    def get(self, content):
+    def get_tree_path(self, content):
         for row in self.data:
             if content in row:
                 return row
         return None
 
-    def update(self, content, new_data):
-        row = self.get(content)
+    def set_tree_path(self, content, new_data):
+        row = self.get_tree_path(content)
         if row is not None:
             index = self.data.index(row)
             self.data[index] = new_data
