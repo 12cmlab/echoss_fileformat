@@ -14,14 +14,14 @@ class XmlHandler(AbstractFileFormatHandler):
     def loads(self, from_string):
         self.tree = ET.fromstring(from_string)
 
-    def get(self, xpath):
+    def get_tree_path(self, xpath):
         for element in self.tree.iter():
             if element.text == xpath:
                 return element
         return None
 
-    def update(self, xpath, new_data):
-        element = self.get(xpath)
+    def set_tree_path(self, xpath, new_data):
+        element = self.get_tree_path(xpath)
         if element is not None:
             element.text = new_data
         else:
