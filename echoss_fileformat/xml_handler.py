@@ -1,10 +1,10 @@
-from abstract_fileformat_handler import AbstractFileFormatHandler
+from .fileformat_handler import FileformatHandler
 import xml.etree.ElementTree as ET
 import io
 import pandas as pd
 
 
-class XmlHandler(AbstractFileFormatHandler):
+class XmlHandler(FileformatHandler):
     # 지원하는 추가 키워드
     KW_DICT = {
         'load': {
@@ -15,7 +15,7 @@ class XmlHandler(AbstractFileFormatHandler):
         }
     }
 
-    def __get_kw_dict(self):
+    def __get_kw_dict(self) -> dict:
         return XmlHandler.KW_DICT
 
     def __init__(self):

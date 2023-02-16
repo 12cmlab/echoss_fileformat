@@ -1,10 +1,10 @@
-from abstract_fileformat_handler import AbstractFileFormatHandler
+from .fileformat_handler import FileformatHandler
 import io
 import pandas as pd
 import openpyxl
 
 
-class ExcelHandler(AbstractFileFormatHandler):
+class ExcelHandler(FileformatHandler):
     # 지원하는 추가 키워드
     KW_DICT = {
         'load': {
@@ -15,7 +15,7 @@ class ExcelHandler(AbstractFileFormatHandler):
         }
     }
 
-    def __get_kw_dict(self):
+    def __get_kw_dict(self) -> dict:
         return ExcelHandler.KW_DICT
 
     def __init__(self):
@@ -77,7 +77,7 @@ class ExcelHandler(AbstractFileFormatHandler):
 
 
 # workbook version ?
-class ExcelHandlerPyxl(AbstractFileFormatHandler):
+class ExcelHandlerPyxl(FileformatHandler):
     # 지원하는 추가 키워드
     KW_DICT = {
         'load': {

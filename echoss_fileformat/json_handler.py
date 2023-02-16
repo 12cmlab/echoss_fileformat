@@ -1,6 +1,6 @@
 import io
 
-from abstract_fileformat_handler import AbstractFileFormatHandler
+from .fileformat_handler import FileformatHandler
 import json
 import pandas as pd
 import numpy as np
@@ -9,7 +9,7 @@ import logging
 logger = logging.getLogger('echoss_fileformat')
 
 
-class JsonHandler(AbstractFileFormatHandler):
+class JsonHandler(FileformatHandler):
     TYPE_OBJECT = 'object'
     TYPE_ARRAY = 'array'
     TYPE_MULTILINE = 'multiline'
@@ -24,7 +24,8 @@ class JsonHandler(AbstractFileFormatHandler):
         }
     }
 
-    def __get_kw_dict(self):
+
+    def __get_kw_dict(self) -> dict:
         return JsonHandler.KW_DICT
     
     def __init__(self, json_type=TYPE_OBJECT, encoding='utf-8', use_key=''):
