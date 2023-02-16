@@ -5,14 +5,27 @@ import pandas as pd
 
 
 class XmlHandler(AbstractFileFormatHandler):
+    # 지원하는 추가 키워드
+    KW_DICT = {
+        'load': {
+
+        },
+        'dump': {
+
+        }
+    }
+
+    def __get_kw_dict(self):
+        return XmlHandler.KW_DICT
+
     def __init__(self):
         self.tree = None
 
-    def load(self, from_stream):
-        self.tree = ET.parse(from_stream)
+    def load(self, file_or_filename):
+        self.tree = ET.parse(file_or_filename)
 
-    def loads(self, from_string):
-        self.tree = ET.fromstring(from_string)
+    def loads(self, str_or_bytes):
+        self.tree = ET.fromstring(str_or_bytes)
 
     def get_tree_path(self, xpath):
         for element in self.tree.iter():
@@ -29,8 +42,8 @@ class XmlHandler(AbstractFileFormatHandler):
             new_element.text = new_data
             self.tree.getroot().append(new_element)
 
-    def dump(self, to_stream):
-        self.tree.write(to_stream)
+    def dump(self, file_or_filename):
+        self.tree.write(file_or_filename)
 
     def dumps(self):
         return ET.tostring(self.tree.getroot(), encoding="unicode")

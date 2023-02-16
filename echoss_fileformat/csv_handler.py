@@ -16,18 +16,8 @@ class CsvHandler(AbstractFileFormatHandler):
         }
     }
 
-    @staticmethod
-    def __make_kw_dict(kw_name, kw_dict):
-        if kw_dict is None:
-            kw_dict = {}
-        if kw_name in CsvHandler.KW_DICT:
-            copy_dict = CsvHandler.KW_DICT[kw_name].copy()
-            for k in kw_dict:
-                if k in copy_dict:
-                    copy_dict[k] = kw_dict[k]
-            return copy_dict
-        else:
-            return {}
+    def __get_kw_dict(self):
+        return CsvHandler.KW_DICT
 
     def __init__(self, encoding='utf-8', delimiter=',', quotechar='"', escapechar='\\'):
         self.data_df = None
@@ -36,10 +26,10 @@ class CsvHandler(AbstractFileFormatHandler):
         self.quotechar = quotechar
         self.escapechar = escapechar
 
-    def load(self, from_stream, header=0, skiprows=0, nrows=None, usecols=None, kw_dict=None):
+    def load(self, file_or_filename, header=0, skiprows=0, nrows=None, usecols=None, kw_dict=None):
         kwargs = CsvHandler.__make_kw_dict('load', kw_dict)
         self.data_df = pd.read_csv(
-            from_stream,
+            file_or_filename,
             encoding=self.encoding,
             delimiter=self.delimiter,
             quotechar=self.quotechar,
@@ -52,8 +42,8 @@ class CsvHandler(AbstractFileFormatHandler):
         )
         return self.data_df
 
-    def loads(self, from_string, header=0, skiprows=0, nrows=None, usecols=None, kw_dict=None):
-        stream = io.StringIO(from_string)
+    def loads(self, str_or_bytes, header=0, skiprows=0, nrows=None, usecols=None, kw_dict=None):
+        stream = io.StringIO(str_or_bytes)
         return self.load(stream, header, skiprows, nrows, usecols, kw_dict)
 
     def get_tree_path(self, tree_path: str):
@@ -87,11 +77,11 @@ class CsvHandler(AbstractFileFormatHandler):
                 if colname in self.data_df.colnums:
                     self.data_df.loc[row_index, colname] = new_data
 
-    def dump(self, to_stream, quoting=0, kw_dict=None):
+    def dump(self, file_or_filename, quoting=0, kw_dict=None):
         kwargs = CsvHandler.__make_kw_dict('dump', kw_dict)
         if self.data_df:
             self.data_df.to_csv(
-                to_stream,
+                file_or_filename,
                 encoding=self.encoding,
                 delimiter=self.delimiter,
                 quotechar=self.quotechar,

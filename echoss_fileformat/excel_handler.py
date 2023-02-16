@@ -5,12 +5,25 @@ import openpyxl
 
 
 class ExcelHandler(AbstractFileFormatHandler):
+    # 지원하는 추가 키워드
+    KW_DICT = {
+        'load': {
+
+        },
+        'dump': {
+
+        }
+    }
+
+    def __get_kw_dict(self):
+        return ExcelHandler.KW_DICT
+
     def __init__(self):
         self.data_df = pd.DataFrame()
 
-    def load(self, from_stream, sheet_name=0, header=0, skiprows=0, nrows=None, usecols=None):
+    def load(self, file_or_filename, sheet_name=0, header=0, skiprows=0, nrows=None, usecols=None):
         self.data_df = pd.read_excel(
-            from_stream,
+            file_or_filename,
             sheet_name=sheet_name,
             header=header,
             skiprows=skiprows,
@@ -19,8 +32,8 @@ class ExcelHandler(AbstractFileFormatHandler):
         )
         return self.data_df
 
-    def loads(self, from_string, sheet_name=0, header=0, skiprows=0, nrows=None, usecols=None):
-        file = io.BytesIO(from_string)
+    def loads(self, str_or_bytes, sheet_name=0, header=0, skiprows=0, nrows=None, usecols=None):
+        file = io.BytesIO(str_or_bytes)
         return self.load(file, sheet_name, header, skiprows, nrows, usecols)
 
     def get_tree_path(self, tree_path):
@@ -65,6 +78,19 @@ class ExcelHandler(AbstractFileFormatHandler):
 
 # workbook version ?
 class ExcelHandlerPyxl(AbstractFileFormatHandler):
+    # 지원하는 추가 키워드
+    KW_DICT = {
+        'load': {
+
+        },
+        'dump': {
+
+        }
+    }
+
+    def __get_kw_dict(self):
+        return ExcelHandlerPyxl.KW_DICT
+
     def __init__(self):
         self.workbook = None
 

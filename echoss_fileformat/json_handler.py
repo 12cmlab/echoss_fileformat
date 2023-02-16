@@ -13,6 +13,19 @@ class JsonHandler(AbstractFileFormatHandler):
     TYPE_OBJECT = 'object'
     TYPE_ARRAY = 'array'
     TYPE_MULTILINE = 'multiline'
+
+    # 지원하는 추가 키워드
+    KW_DICT = {
+        'load': {
+
+        },
+        'dump': {
+
+        }
+    }
+
+    def __get_kw_dict(self):
+        return JsonHandler.KW_DICT
     
     def __init__(self, json_type=TYPE_OBJECT, encoding='utf-8', use_key=''):
         """Initialize json file format
@@ -55,10 +68,10 @@ class JsonHandler(AbstractFileFormatHandler):
             else:
                 self.error_data = json_obj
 
-    def load(self, from_stream):
+    def load(self, file_or_filename):
         """
         Args:
-            from_stream (file-like object): file or s3 stream object which support .read() function
+            file_or_filename (file-like object): file or s3 stream object which support .read() function
 
         Returns:
             json object (dict) if json_type is 'object'
@@ -67,17 +80,17 @@ class JsonHandler(AbstractFileFormatHandler):
         if self.json_type == JsonHandler.TYPE_MULTILINE:
             self.data = []
             self.error_data = []
-            if isinstance(from_stream, io.TextIOWrapper):
-                for i, line_str in enumerate(from_stream):
+            if isinstance(file_or_filename, io.TextIOWrapper):
+                for i, line_str in enumerate(file_or_filename):
                     try:
                         json_obj = json.loads(line_str)
                         self.append_json_data(json_obj)
                     except Exception as e:
                         self.error_data.append(line_str)
                         logger.exception(e)
-            elif isinstance(from_stream, io.BytesIO):
+            elif isinstance(file_or_filename, io.BytesIO):
                 try:
-                    lines = from_stream.splitlines()
+                    lines = file_or_filename.splitlines()
                 except Exception as e:
                     logger.exception(e)
                     return None
@@ -94,7 +107,7 @@ class JsonHandler(AbstractFileFormatHandler):
             self.data = None
             self.error_data = None
             try:
-                root_json = json.load(from_stream)
+                root_json = json.load(file_or_filename)
                 if type(root_json) == list:
                     logger.error(f"given json type {JsonHandler.TYPE_OBJECT} but is {JsonHandler.TYPE_ARRAY}")
                     self.error_data = root_json
@@ -106,7 +119,7 @@ class JsonHandler(AbstractFileFormatHandler):
             self.data = []
             self.error_data = None
             try:
-                root_json = json.load(from_stream)
+                root_json = json.load(file_or_filename)
                 if type(root_json) != list:
                     logger.error(f"given json type {JsonHandler.TYPE_ARRAY} but is {JsonHandler.TYPE_OBJECT}")
                     self.error_data = root_json
@@ -116,11 +129,11 @@ class JsonHandler(AbstractFileFormatHandler):
                 logger.exception(e)
         return self.data
 
-    def loads(self, from_string):
+    def loads(self, str_or_bytes):
         if self.json_type == JsonHandler.TYPE_MULTILINE:
             self.data = []
             self.error_data = []
-            for i, line_str in enumerate(from_string):
+            for i, line_str in enumerate(str_or_bytes):
                 try:
                     json_obj = json.loads(line_str)
                     self.append_json_data(json_obj)
@@ -131,7 +144,7 @@ class JsonHandler(AbstractFileFormatHandler):
             self.data = None
             self.error_data = None
             try:
-                root_json = json.loads(from_string)
+                root_json = json.loads(str_or_bytes)
                 if type(root_json) == list:
                     logger.error(f"given json type {JsonHandler.TYPE_OBJECT} but is {JsonHandler.TYPE_ARRAY}")
                     self.error_data = root_json
@@ -143,7 +156,7 @@ class JsonHandler(AbstractFileFormatHandler):
             self.data = []
             self.error_data = None
             try:
-                root_json = json.loads(from_string)
+                root_json = json.loads(str_or_bytes)
                 if type(root_json) != list:
                     logger.error(f"given json type {JsonHandler.TYPE_ARRAY} but is {JsonHandler.TYPE_OBJECT}")
                     self.error_data = root_json
@@ -227,9 +240,9 @@ class JsonHandler(AbstractFileFormatHandler):
             self.data_dirty = True
             logger.info(f"set_tree_path modify [{set_count}] data")
 
-    def dump(self, to_stream):
+    def dump(self, file_or_filename):
         if self.data:
-            json.dump(self.data, to_stream)
+            json.dump(self.data, file_or_filename)
 
     def dumps(self):
         if self.data:
