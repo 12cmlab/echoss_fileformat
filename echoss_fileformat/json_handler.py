@@ -1,13 +1,14 @@
-import io
+import logging
 
 from .fileformat_handler import FileformatHandler
+import io
 import json
 import pandas as pd
 import numpy as np
-import logging
+from typing import Union, Dict, Literal
 
-logger = logging.getLogger('echoss_fileformat')
 
+logger = logging.getLogger(__name__)
 
 class JsonHandler(FileformatHandler):
     TYPE_OBJECT = 'object'
@@ -15,7 +16,7 @@ class JsonHandler(FileformatHandler):
     TYPE_MULTILINE = 'multiline'
 
     # 지원하는 추가 키워드
-    KW_DICT = {
+    support_kw = {
         'load': {
 
         },
@@ -24,23 +25,18 @@ class JsonHandler(FileformatHandler):
         }
     }
 
-
-    def __get_kw_dict(self) -> dict:
-        return JsonHandler.KW_DICT
-    
-    def __init__(self, json_type=TYPE_OBJECT, encoding='utf-8', use_key=''):
+    def __init__(self, json_type:Union['object', 'array', 'multiline'], encoding='utf-8', use_key: str = ''):
         """Initialize json file format
+
         Args:
-            json_type (str): 'object' for one object, 'multiline' for objects each lines, 'array' for array
-            use_key (str): if not empty, under the node name will be used. for example 'data'
+            json_type (Union['object', 'array', 'multiline']): 'object' for one json object, 'array' for json array, 'multiline' for objects each lines
+            use_key (str): if empty use whole json else only key value used. for example 'data'
         """
-        self.data = None
-        self.error_data = None
+        super().__init__(encoding)
         self.json_type = json_type
-        self.encoding = encoding
         self.use_key = use_key
-        self.data_df = None
-        self.data_dirty = False
+        # 처리과정에서 에러가 발생한 경우 저장
+        self.error_data = None
 
     # 내부 함수 for multiline json_type
     def append_json_data(self, json_obj):
@@ -69,7 +65,7 @@ class JsonHandler(FileformatHandler):
             else:
                 self.error_data = json_obj
 
-    def load(self, file_or_filename):
+    def load(self, file_or_filename: Union[io.TextIOWrapper, io.BytesIO, str]) -> pd.DataFrame:
         """
         Args:
             file_or_filename (file-like object): file or s3 stream object which support .read() function
