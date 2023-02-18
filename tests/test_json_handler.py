@@ -51,11 +51,12 @@ class MyTestCase(unittest.TestCase):
         else:
             self.assertTrue(True, "File not exist")
 
-    def test_load_by_json_type(self):
+    def test_load_complex_by_json_type(self):
         json_types = ['object', 'array', 'multiline']
-        expect_fail = [0, 1, 1942]
+        expect_passes = [1, 0, 0]
+        expect_fails = [0, 1, 1942]
 
-        for json_type, expect_fail in zip(json_types, expect_fail):
+        for json_type, expect_pass, expect_fail in zip(json_types, expect_passes, expect_fails):
             try:
                 handler = JsonHandler(json_type)
                 handler.load('test_data/complex_one_object.json')
@@ -64,25 +65,74 @@ class MyTestCase(unittest.TestCase):
             except Exception as e:
                 self.assertTrue(True, f"\t {json_type} json_type File load fail by {e}")
             else:
-                logger.info(f"\t {json_type} load fail expect {expect_fail} and given {fail_size}")
+                logger.info(f"\t {json_type} load expect pass {expect_pass} get {pass_size}")
+                self.assertTrue(pass_size == expect_pass)
+                logger.info(f"\t {json_type} load expect fail {expect_fail} get {fail_size}")
                 self.assertTrue(fail_size == expect_fail)
 
-    def test_load_by_data_key(self):
+    def test_load_complex_by_data_key(self):
         json_types = ['object', 'array', 'multiline']
-        expect_fail = [0, 0, 1942]
-        handler = JsonHandler('object', data_key='main')
+        expect_passes = [1, 102, 0]
+        expect_fails = [0, 0, 1942]
 
-        for json_type, expect_fail in zip(json_types, expect_fail):
+        for json_type, expect_pass, expect_fail in zip(json_types, expect_passes, expect_fails):
             try:
-                handler = JsonHandler(json_type)
+                handler = JsonHandler(json_type, data_key='main')
                 handler.load('test_data/complex_one_object.json')
                 pass_size = len(handler.pass_list)
                 fail_size = len(handler.fail_list)
             except Exception as e:
                 self.assertTrue(True, f"\t {json_type} json_type File load fail by {e}")
             else:
-                logger.info(f"\t '{json_type}' load fail expect {expect_fail} and given {fail_size}")
-                self.assertTrue(fail_size == expect_fail, f"Following test loop canceled {json_types}")
+                logger.info(f"\t {json_type} load expect pass {expect_pass} get {pass_size}")
+                self.assertTrue(pass_size == expect_pass)
+                logger.info(f"\t {json_type} load expect fail {expect_fail} get {fail_size}")
+                self.assertTrue(fail_size == expect_fail)
+
+    def test_load_mutliline_by_mode(self):
+        modes = ['text', 'binary']
+        expect_passes = [15, 15]
+        expect_fails = [0, 0]
+
+        for mode, expect_pass, expect_fail in zip(modes, expect_passes, expect_fails):
+            try:
+                handler = JsonHandler('multiline')
+                if mode == 'text':
+                    with open('test_data/simple_multiline_object.json', 'r', encoding='utf-8') as fp:
+                        handler.load(fp)
+                        pass_size = len(handler.pass_list)
+                        fail_size = len(handler.fail_list)
+                elif mode == 'binary':
+                    with open('test_data/simple_multiline_object.json', 'rb') as fb:
+                        handler.load(fb)
+                        pass_size = len(handler.pass_list)
+                        fail_size = len(handler.fail_list)
+            except Exception as e:
+                self.assertTrue(True, f"\t {mode} multiline File load fail by {e}")
+            else:
+                logger.info(f"\t open mode '{mode}' 'multiline' expect pass {expect_pass} get {pass_size}")
+                # self.assertEqual(pass_size == expect_pass)
+                logger.info(f"\t open mode '{mode}' 'multiline' expect fail {expect_fail} get {fail_size}")
+                # self.assertEqual(fail_size == expect_fail)
+
+    def test_load_mutliline_by_data_key(self):
+        json_types = ['object', 'array', 'multiline']
+        expect_passes = [0, 0, 15]
+        expect_fails = [1, 1, 0]
+
+        for json_type, expect_pass, expect_fail in zip(json_types, expect_passes, expect_fails):
+            try:
+                handler = JsonHandler(json_type, data_key='message')
+                handler.load('test_data/simple_multiline_object.json')
+                pass_size = len(handler.pass_list)
+                fail_size = len(handler.fail_list)
+            except Exception as e:
+                self.assertTrue(True, f"\t {json_type} json_type File load fail by {e}")
+            else:
+                logger.info(f"\t {json_type} load expect pass {expect_pass} get {pass_size}")
+                self.assertTrue(pass_size == expect_pass)
+                logger.info(f"\t {json_type} load expect fail {expect_fail} get {fail_size}")
+                self.assertTrue(fail_size == expect_fail)
 
 
 if __name__ == '__main__':
