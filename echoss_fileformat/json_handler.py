@@ -80,7 +80,11 @@ class JsonHandler(FileformatHandler):
                     self.fail_list = [e for e in json_obj if self.data_key not in e]
             # 전체는 객체이지만 data_key 가 배열일 경우
             elif self.data_key in json_obj and isinstance(json_obj[self.data_key], list):
-                self.pass_list = json_obj[self.data_key]
+                if isinstance(json_obj[self.data_key], list):
+                    self.pass_list.extend(json_obj[self.data_key])
+                else:
+                    self.fail_list.append(json_obj[self.data_key])
+                    raise TypeError('json_obj[self.data_key] must be a list')
             else:
                 self.fail_list.append(json_obj)
         elif self.json_type == JsonHandler.TYPE_MULTILINE:
@@ -119,7 +123,7 @@ class JsonHandler(FileformatHandler):
         elif isinstance(file_or_filename, io.TextIOWrapper):
             fp = file_or_filename
             mode = 'text'
-        elif isinstance(file_or_filename, io.BytesIO):
+        elif isinstance(file_or_filename, io.BytesIO) or isinstance(file_or_filename, io.BufferedIOBase):
             fp = file_or_filename
             mode = 'binary'
         else:
@@ -133,7 +137,7 @@ class JsonHandler(FileformatHandler):
                 except Exception as e:
                     file_bytes = fp.read()
                     self.fail_list.append(file_bytes)
-                    logger.exception(e)
+                    logger.error(e)
             elif self.json_type == JsonHandler.TYPE_MULTILINE:
                 for line_str in fp:
                     try:
@@ -141,7 +145,7 @@ class JsonHandler(FileformatHandler):
                         self.update_json_data(json_obj)
                     except Exception as e:
                         self.fail_list.append(line_str)
-        if 'binary' == mode:
+        elif 'binary' == mode:
             if self.json_type == JsonHandler.TYPE_OBJECT or self.json_type == JsonHandler.TYPE_ARRAY:
                 try:
                     root_json = json.load(fp)
@@ -149,15 +153,19 @@ class JsonHandler(FileformatHandler):
                 except Exception as e:
                     file_bytes = fp.read()
                     self.fail_list.append(file_bytes)
-                    logger.exception(e)
+                    logger.error(e)
             if self.json_type == JsonHandler.TYPE_MULTILINE:
-                try:
-                    lines = file_or_filename.splitlines()
-                except Exception as e:
-                    logger.exception(e)
-                    file_bytes = file_or_filename.read()
-                    self.fail_list.append(file_bytes)
-                    return
+                # try:
+                #     lines = fp.splitlines()
+                # except Exception as e:
+                #     logger.exception(e)
+                #     file_bytes = file_or_filename.read()
+                #     self.fail_list.append(file_bytes)
+                #     return
+                if not isinstance(fp, io.BytesIO):
+                    lines = io.BytesIO(fp.read())
+                else:
+                    lines = fp
 
                 for line_bytes in lines:
                     try:
