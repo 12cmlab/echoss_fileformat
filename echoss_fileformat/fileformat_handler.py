@@ -16,10 +16,12 @@ class FileformatHandler:
     """
     support_kw: dict = {
         'load': {
-
+            'encoding': 'utf-8',
+            'error_log': 'error.log'
         },
         'dump:': {
-
+            'encoding': 'utf-8',
+            'error_log': 'error.log'
         }
     }
 

@@ -26,10 +26,15 @@ class JsonHandler(FileformatHandler):
     support_kw = {
         'load': {
             'json_type': TYPE_ARRAY,
-
+            'data_key': '',
+            'encoding': 'utf-8',
+            'error_log': 'error.log'
         },
-        'dump': {
-
+        'dump:': {
+            'json_type': TYPE_ARRAY,
+            'data_key': '',
+            'encoding': 'utf-8',
+            'error_log': 'error.log'
         }
     }
 
@@ -135,7 +140,6 @@ class JsonHandler(FileformatHandler):
                         json_obj = json.loads(line_str)
                         self.update_json_data(json_obj)
                     except Exception as e:
-                        logger.exception(e)
                         self.fail_list.append(line_str)
         if 'binary' == mode:
             if self.json_type == JsonHandler.TYPE_OBJECT or self.json_type == JsonHandler.TYPE_ARRAY:
