@@ -7,13 +7,25 @@ import io
 
 
 class CsvHandler(FileformatHandler):
-    # 지원하는 추가 키워드
-    KW_DICT = {
-        'load': {
-            'usecols': None
-        },
-        'dump': {
+    """JSON file handler
 
+    학습데이터로 JSON 파일은 전체가 'array' 이거나, object 의 특정 키 값이 'array' 라고 추정
+    또는 한줄이 JSON 형태인 'multiline' 파일일 수 있음
+    json_type 'object' 는 학습데이터가 아닌 전체 파일을 읽어들일 떄에만 사용
+    """
+    TYPE_ARRAY = 'array'
+    TYPE_MULTILINE = 'multiline'
+    TYPE_OBJECT = 'object'
+
+    # 지원하는 추가 키워드 : JSON
+    support_kw = {
+        'load': {
+            'json_type': TYPE_ARRAY,
+            'data_key': '',
+        },
+        'dump:': {
+            'json_type': TYPE_ARRAY,
+            'data_key': '',
         }
     }
 
@@ -24,35 +36,21 @@ class CsvHandler(FileformatHandler):
         self.quotechar = quotechar
         self.escapechar = escapechar
 
-    def get_kw_dict(self) -> dict:
-        return CsvHandler.KW_DICT
 
-    def make_kw_dict(self, kw_name: str, kw_dict: dict) -> dict:
-        """내부 메쏘드로 지원 키워드 사전에서 해당 키워드 사전 생성.
-
-        디폴트 사전을 복사 후 kw_dict 가 있으면 신규 값으로 변경
+    def load(self, file_or_filename, header=0, skiprows=0, nrows=None, usecols=None, kw_dict=None):
+        """CSV 파일 읽기
 
         Args:
-            kw_name (str): 지원 키워드 사전의 유형별 이름
-            kw_dict (dict): 신규 값이 들어간 키워드 사전
+            file_or_filename:
+            header:
+            skiprows:
+            nrows:
+            usecols:
+            kw_dict:
 
         Returns:
-            (dict) 결과 키위드 사전
-        """
-        if kw_dict is None:
-            kw_dict = {}
-        handler_kw_dict = self.get_kw_dict()
-        if kw_name in handler_kw_dict:
-            copy_dict = handler_kw_dict[kw_name].copy()
-            for k in kw_dict:
-                if k in copy_dict:
-                    copy_dict[k] = kw_dict[k]
-            return copy_dict
-        else:
-            return {}
 
-    # def load(self, file_or_filename: Union[io.TextIOWrapper, io.BytesIO, str]) -> pd.DataFrame:
-    def load(self, file_or_filename, header=0, skiprows=0, nrows=None, usecols=None, kw_dict=None):
+        """
         kwargs = CsvHandler.__make_kw_dict('load', kw_dict)
         self.data_df = pd.read_csv(
             file_or_filename,

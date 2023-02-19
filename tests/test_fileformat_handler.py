@@ -1,6 +1,8 @@
-import time
+import io
 import unittest
 import logging
+import os
+import time
 from echoss_fileformat.fileformat_handler import FileformatHandler
 
 # configure the logger
@@ -30,7 +32,7 @@ class FileformatHandlerTestCase(unittest.TestCase):
     def test_make_kw_dict_empty(self):
         handler = FileformatHandler()
         kw_dict = {'abc': 'bcf'}
-        kw_dict = handler.make_kw_dict('load', kw_dict)
+        kw_dict = handler._make_kw_dict('load', kw_dict)
 
         self.assertTrue('abc' not in kw_dict, "'abc' is not support keyword")
         self.assertDictEqual(handler.support_kw['load'], kw_dict, "result dict is not copy of support_kw ")
@@ -38,8 +40,130 @@ class FileformatHandlerTestCase(unittest.TestCase):
 
     def test_make_kw_dict_success(self):
         handler = FileformatHandler()
-        kw_dict = handler.make_kw_dict('load', {'encoding': 'ascii'})
-        self.assertEqual(kw_dict['encoding'], 'ascii', "check change key value")  # add assertion here
+        kw_dict = handler._make_kw_dict('load', {'encoding': 'ascii'})
+        self.assertEqual(kw_dict['encoding'], 'ascii', "check change key value")
+
+    def test_get_file_obj_not_exist(self):
+        handler = FileformatHandler()
+
+        # not exist Directory and 'r'
+        filename = 'test_data_wrong/complex_one.json'
+        open_mode = 'r'
+        with self.assertRaises(FileNotFoundError) as context:
+            fp, mode, opened = handler._get_file_obj(filename, open_mode)
+            if opened:
+                fp.close()
+        self.assertTrue(filename in str(context.exception))
+
+        # not exist Directory and 'w'
+        filename = 'test_data_wrong/complex_one.json'
+        open_mode = 'w'
+        with self.assertRaises(FileNotFoundError) as context:
+            fp, mode, opened = handler._get_file_obj(filename, open_mode)
+            if opened:
+                fp.close()
+        self.assertTrue(filename in str(context.exception))
+
+        # exist Directory and 'r
+        filename = 'test_data/complex_one_not_exist.json'
+        open_mode = 'r'
+        with self.assertRaises(FileNotFoundError) as context:
+            fp, mode, opened = handler._get_file_obj(filename, open_mode)
+            if opened:
+                fp.close()
+        self.assertTrue(filename in str(context.exception))
+
+        # exist Directory and 'w'
+        filename = 'test_data/complex_one_not_exist_to_delete.json'
+        open_mode = 'w'
+        try:
+            fp, mode, opened = handler._get_file_obj(filename, open_mode)
+            if opened:
+                fp.close()
+                # 임시 파일 삭제
+                os.remove(filename)
+        except Exception as e:
+            self.assertTrue(filename in str(e))
+
+    def test_get_file_obj_open_mode_filename(self):
+        handler = FileformatHandler()
+
+        # not exist Directory and 'r'
+        open_modes = ['r', 'w', 'rb', 'wb']
+        filenames = [
+            'test_data/simple_multiline_object.json',
+            'test_data/simple_multiline_object_to_delete.json',
+            'test_data/simple_multiline_object.json',
+            'test_data/simple_multiline_object_to_delete.json',
+        ]
+
+        line_list = []
+        for filename, open_mode in zip(filenames, open_modes):
+            handler = FileformatHandler()
+            fp, mode, opened = handler._get_file_obj(filename, open_mode)
+            logger.info(f"{fp=} {mode=} {opened=}")
+
+            if open_mode in ['r', 'rb']:
+                try:
+                    for l in fp:
+                        line_list.append(l)
+                except Exception as e:
+                    logger.info(f"{e}")
+
+            elif open_mode in ['w', 'wb']:
+                for l in line_list:
+                    fp.write(l)
+                line_list.clear()
+
+            if opened:
+                fp.close()
+
+            if open_mode in ['r', 'rb']:
+                self.assertEqual(len(line_list), 15)
+            elif open_mode in ['w', 'wb']:
+                self.assertTrue(os.path.exists(filename))
+                self.assertTrue(os.path.getsize(filename) > 0)
+                if '_to_delete' in filename:
+                    os.remove(filename)
+        pass
+
+    def test_get_file_obj_open_mode_file_obj(self):
+        handler = FileformatHandler()
+
+        # not exist Directory and 'r'
+        open_modes = ['r', 'w', 'rb', 'wb']
+        filenames = [
+            'test_data/simple_multiline_object.json',
+            'test_data/simple_multiline_object_to_delete.json',
+            'test_data/simple_multiline_object.json',
+            'test_data/simple_multiline_object_to_delete.json',
+        ]
+        expect_instances = [
+            io.TextIOWrapper,
+            io.TextIOWrapper,
+            io.BufferedIOBase,
+            io.BufferedIOBase
+        ]
+
+        line_list = []
+        for filename, open_mode, expect_instance in zip(filenames, open_modes, expect_instances):
+            handler = FileformatHandler()
+
+            if 'b' in open_mode:
+                fp = open(filename, open_mode)
+            else:
+                fp = open(filename, open_mode, encoding='utf-8')
+
+            result_fp, mode, opened = handler._get_file_obj(fp, open_mode)
+            logger.info(f"{result_fp=} {mode=} {opened=}")
+
+            self.assertTrue(isinstance(fp, expect_instance))
+
+            if fp:
+                fp.close()
+                if '_to_delete' in filename:
+                    os.remove(filename)
+        pass
 
 
 if __name__ == '__main__':
