@@ -16,12 +16,8 @@ class FileformatHandler:
     """
     support_kw: dict = {
         'load': {
-            'encoding': 'utf-8',
-            'error_log': 'error.log'
         },
         'dump:': {
-            'encoding': 'utf-8',
-            'error_log': 'error.log'
         }
     }
 
@@ -36,22 +32,6 @@ class FileformatHandler:
         self.error_log = error_log
         self.pass_list = []
         self.fail_list = []
-
-    def make_kw_dict(self, method_type_name: str, kw_dict: dict) -> dict:
-        """내부 메쏘드로 서브클래스에 선언된 지원 키워드 사전 획득
-
-        Returns:
-            서브클래스의 지원 키워드 사전
-        """
-        copy_dict = {}
-        # handler_kw_dict = self.get_kw_dict()
-        if method_type_name in self.support_kw:
-            copy_dict = self.support_kw[method_type_name].copy()
-            for k in kw_dict:
-                if k in copy_dict:
-                    copy_dict[k] = kw_dict[k]
-            return copy_dict
-        return copy_dict
 
     def load(self, file_or_filename: Union[io.TextIOWrapper, io.BytesIO, str]):
         """파일에서 데이터를 읽기
@@ -109,3 +89,69 @@ class FileformatHandler:
         """
         pass
 
+    """
+    
+    클래스 내부 메쏘드 
+    
+    """
+
+    def _make_kw_dict(self, method_type_name: str, kw_dict: dict) -> dict:
+        """내부 메쏘드로 서브클래스에 선언된 지원 키워드 사전 획득
+
+        Returns:
+            서브클래스의 지원 키워드 사전
+        """
+        copy_dict = {}
+        # handler_kw_dict = self.get_kw_dict()
+        if method_type_name in self.support_kw:
+            copy_dict = self.support_kw[method_type_name].copy()
+            for k in kw_dict:
+                if k in copy_dict:
+                    copy_dict[k] = kw_dict[k]
+            return copy_dict
+        return copy_dict
+
+    def _get_file_obj(self, file_or_filename, open_mode: str):
+        """클래스 내부 메쏘드 file_or_filename 의 instance type을 확인하여 사용하기 편한 file object 로 변환
+
+        Args:
+            file_or_filename: file 관련 객체 또는 filename
+
+        Returns: file_obj, mode, opened
+            file_obj: file object to read, write and split lines
+            mode: 'text' or 'binary'
+            opened: True if file is opened in this method, False else
+        """
+        # file_or_filename 클래스 유형에 따라서 처리 방법이 다름
+        opened = False
+        if open_mode not in ['r', 'w', 'a', 'rb', 'wb', 'ab']:
+            raise TypeError(f"{open_mode=} is not supported")
+
+        if isinstance(file_or_filename, io.TextIOWrapper):
+            fp = file_or_filename
+            mode = 'text'
+        # AWS s3 use io.BytesIO
+        elif isinstance(file_or_filename, io.BytesIO):
+            fp = file_or_filename
+            mode = 'binary'
+        # open 'rb' use io.BufferedIOBase (BufferedReader or BufferedWriter)
+        elif isinstance(file_or_filename, io.BufferedIOBase):
+            fp = file_or_filename
+            # fp = io.BytesIO(file_or_filename.read())
+            mode = 'binary'
+        elif isinstance(file_or_filename, str):
+            try:
+                if 'b' in open_mode:
+                    fp = open(file_or_filename, open_mode)
+                    mode = 'binary'
+                else:
+                    fp = open(file_or_filename, open_mode, encoding=self.encoding)
+                    mode = 'text'
+            except Exception as e:
+                logger.error(f"{file_or_filename} is not exist filename or can not open mode='{open_mode}' encoding={self.encoding} {e}")
+                raise e
+            else:
+                opened = True
+        else:
+            raise TypeError(f"{file_or_filename} is not file obj")
+        return fp, mode, opened

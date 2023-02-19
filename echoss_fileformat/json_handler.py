@@ -22,34 +22,27 @@ class JsonHandler(FileformatHandler):
     TYPE_MULTILINE = 'multiline'
     TYPE_OBJECT = 'object'
 
-    # 지원하는 추가 키워드 : JSON
+    # 실제 json 메쏘드 호출 시 지원하는 추가 키워드
     support_kw = {
         'load': {
-            'json_type': TYPE_ARRAY,
-            'data_key': '',
-            'encoding': 'utf-8',
-            'error_log': 'error.log'
+            'cls': None,
         },
         'dump:': {
-            'json_type': TYPE_ARRAY,
-            'data_key': '',
-            'encoding': 'utf-8',
-            'error_log': 'error.log'
+            'cls': None,
         }
     }
 
-    def __init__(self, json_type: Union['array', 'multiline', 'object'], data_key: str = '', encoding='utf-8'):
+    def __init__(self, json_type: Union['array', 'multiline', 'object'], encoding='utf-8', error_log='error.log'):
         """Initialize json file format
 
         Args:
             json_type (Union['object', 'array', 'multiline']): 'object' for one json object, 'array' for json array, 'multiline' for objects each lines
-            data_key (str): if empty use whole file, else use only key value. for example 'data'
         """
-        super().__init__(encoding)
+        super().__init__(encoding=encoding, error_log=error_log)
         self.json_type = json_type
-        self.data_key = data_key
+        self.data_key = ''
 
-    def append_json_data(self, json_obj) -> None:
+    def _append_json_data(self, json_obj) -> None:
         """'multiline' json_type 내부메쏘드 data_obj 에 json_obj 추가
 
         Args:
@@ -63,7 +56,7 @@ class JsonHandler(FileformatHandler):
             self.failed_obj.append(json_obj)
 
     # 내부 함수 for object and array json_type
-    def update_json_data(self, json_obj) -> None:
+    def _update_json_data(self, json_obj) -> None:
         """내부메쏘드 json_obj 처리 결과 반영
 
         Args:
@@ -102,16 +95,39 @@ class JsonHandler(FileformatHandler):
             else:
                 self.fail_list.append(json_obj)
 
-    def load(self, file_or_filename: Union[io.TextIOWrapper, io.BytesIO, str]) -> None:
+    def _decide_rw_open_mode(self, method_name) -> str :
+        """내부메쏘드 json_type 과 method_name 에 따라서 파일 일기/쓰기 오픈 모드 결정
+
+        Args:
+            method_name: 'load' or 'dump'
+
+        Returns: 'r', 'w', 'rb', 'wb'
+        """
+        if 'dump' == method_name:
+            if self.json_type == JsonHandler.TYPE_MULTILINE:
+                return 'wb'
+            else:
+                return 'w'
+        else:  #  'load'
+            if self.json_type == JsonHandler.TYPE_MULTILINE:
+                return 'rb'
+            else:
+                return 'r'
+
+    def load(self, file_or_filename: Union[io.TextIOWrapper, io.BytesIO, str], data_key: str = '', **kwargs) -> None:
         """파일 객체나 파일명에서 JSON 데이터 읽기
         Args:
             file_or_filename (file-like object): file or s3 stream object which support .read() function
-
+            data_key (str): if empty use whole file, else use only key value. for example 'data'
         Returns:
             json object (dict) if json_type is 'object'
             array of dict if json_type is 'array' or 'multiline'
         """
+        self.data_key = data_key
+        kw_dict = self._make_kw_dict('load', kwargs)
+        open_mode = self._decide_rw_open_mode('load')
         # file_or_filename 클래스 유형에 따라서 처리 방법이 다름
+        fp, mode, opened = self._get_file_obj(file_or_filename, 'rb')
         if isinstance(file_or_filename, str):
             try:
                 fp = open(file_or_filename, 'r', encoding=self.encoding)
@@ -123,8 +139,11 @@ class JsonHandler(FileformatHandler):
         elif isinstance(file_or_filename, io.TextIOWrapper):
             fp = file_or_filename
             mode = 'text'
-        elif isinstance(file_or_filename, io.BytesIO) or isinstance(file_or_filename, io.BufferedIOBase):
+        elif isinstance(file_or_filename, io.BytesIO):
             fp = file_or_filename
+            mode = 'binary'
+        elif isinstance(file_or_filename, io.BufferedIOBase):
+            fp = io.BytesIO(file_or_filename.read())
             mode = 'binary'
         else:
             logger.error(f"{file_or_filename} is not file obj ")
@@ -132,8 +151,8 @@ class JsonHandler(FileformatHandler):
         if 'text' == mode:
             if self.json_type == JsonHandler.TYPE_OBJECT or self.json_type == JsonHandler.TYPE_ARRAY:
                 try:
-                    root_json = json.load(fp)
-                    self.update_json_data(root_json)
+                    root_json = json.load(fp, **kw_dict)
+                    self._update_json_data(root_json)
                 except Exception as e:
                     file_bytes = fp.read()
                     self.fail_list.append(file_bytes)
@@ -142,14 +161,14 @@ class JsonHandler(FileformatHandler):
                 for line_str in fp:
                     try:
                         json_obj = json.loads(line_str)
-                        self.update_json_data(json_obj)
+                        self._update_json_data(json_obj)
                     except Exception as e:
                         self.fail_list.append(line_str)
         elif 'binary' == mode:
             if self.json_type == JsonHandler.TYPE_OBJECT or self.json_type == JsonHandler.TYPE_ARRAY:
                 try:
-                    root_json = json.load(fp)
-                    self.update_json_data(root_json)
+                    root_json = json.load(fp, **kw_dict)
+                    self._update_json_data(root_json)
                 except Exception as e:
                     file_bytes = fp.read()
                     self.fail_list.append(file_bytes)
@@ -162,16 +181,13 @@ class JsonHandler(FileformatHandler):
                 #     file_bytes = file_or_filename.read()
                 #     self.fail_list.append(file_bytes)
                 #     return
-                if not isinstance(fp, io.BytesIO):
-                    lines = io.BytesIO(fp.read())
-                else:
-                    lines = fp
+                lines = fp
 
                 for line_bytes in lines:
                     try:
                         line_str = line_bytes.decode(self.encoding)
                         json_obj = json.loads(line_str)
-                        self.update_json_data(json_obj)
+                        self._update_json_data(json_obj)
                     except Exception as e:
                         self.fail_list.append(line_bytes)
                         logger.exception(e)
@@ -263,7 +279,40 @@ class JsonHandler(FileformatHandler):
                 self.fail_list.clear()
         return self.data
 
-    def dump(self, file_or_filename):
+    def dump(self, file_or_filename: Union[io.TextIOWrapper, io.BytesIO, str], data=None, **kwargs) -> None:
+        """데이터를 JSON 파일로 쓰기
+
+        파일은 text, binary 모드 파일객체이거나 파일명 문자열
+        Args:
+            file_or_filename (file, str): 파일객체 또는 파일명, 파일객체는 text모드는 TextIOWrapper, binary모드는 BytestIO사용
+            data: use this data instead of self.data if provide 기능 확장성과 호환성을 위해서 남김
+
+        Returns:
+            없음
+        """
+        if isinstance(file_or_filename, str):
+            try:
+                fp = open(file_or_filename, 'w', encoding=self.encoding)
+                mode = 'text'
+            except Exception as e:
+                logger.error(
+                    f"{file_or_filename} is not exist filename or can not open by encoding={self.encoding}")
+                logger.exception(e)
+                return
+        elif isinstance(file_or_filename, io.TextIOWrapper):
+            fp = file_or_filename
+            mode = 'text'
+        elif isinstance(file_or_filename, io.BytesIO):
+            fp = file_or_filename
+            mode = 'binary'
+        elif isinstance(file_or_filename, io.BufferedIOBase):
+            fp = io.BytesIO(file_or_filename.read())
+            mode = 'binary'
+        else:
+            logger.error(f"{file_or_filename} is not file obj ")
+
+        if data:
+            json.dump(file_or_filename, )
         if self.data:
             json.dump(self.data, file_or_filename)
 

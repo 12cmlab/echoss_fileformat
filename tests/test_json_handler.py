@@ -16,12 +16,14 @@ class MyTestCase(unittest.TestCase):
         테스트 설정
     """
     def setUp(self):
+        """Before test"""
         ids = self.id().split('.')
         self.str_id = f"{ids[-2]}: {ids[-1]}"
         self.start_time = time.perf_counter()
         logger.info(f"setting up test [{self.str_id}] ")
 
     def tearDown(self):
+        """After test"""
         self.end_time = time.perf_counter()
         logger.info(f" tear down test [{self.str_id}] elapsed time {(self.end_time-self.start_time)*1000: .3f}ms \n")
 
@@ -31,7 +33,7 @@ class MyTestCase(unittest.TestCase):
     def test_make_kw_dict_empty(self):
         handler = JsonHandler('array')
         kw_dict = {'abc': 'bcf'}
-        kw_dict = handler.make_kw_dict('load', kw_dict)
+        kw_dict = handler._make_kw_dict('load', kw_dict)
 
         self.assertTrue('abc' not in kw_dict, "'abc' is not support keyword")
         self.assertDictEqual(handler.support_kw['load'], kw_dict, "result dict is not copy of support_kw ")
@@ -39,7 +41,7 @@ class MyTestCase(unittest.TestCase):
 
     def test_make_kw_dict_success(self):
         handler = JsonHandler('array')
-        kw_dict = handler.make_kw_dict('load', {'encoding': 'ascii'})
+        kw_dict = handler._make_kw_dict('load', {'encoding': 'ascii'})
         self.assertEqual(kw_dict['encoding'], 'ascii', "check change key value")
 
     def test_load_not_exist_file(self):
@@ -77,8 +79,8 @@ class MyTestCase(unittest.TestCase):
 
         for json_type, expect_pass, expect_fail in zip(json_types, expect_passes, expect_fails):
             try:
-                handler = JsonHandler(json_type, data_key='main')
-                handler.load('test_data/complex_one_object.json')
+                handler = JsonHandler(json_type)
+                handler.load('test_data/complex_one_object.json', data_key='main')
                 pass_size = len(handler.pass_list)
                 fail_size = len(handler.fail_list)
             except Exception as e:
@@ -122,8 +124,8 @@ class MyTestCase(unittest.TestCase):
 
         for json_type, expect_pass, expect_fail in zip(json_types, expect_passes, expect_fails):
             try:
-                handler = JsonHandler(json_type, data_key='message')
-                handler.load('test_data/simple_multiline_object.json')
+                handler = JsonHandler(json_type)
+                handler.load('test_data/simple_multiline_object.json', data_key='message')
                 pass_size = len(handler.pass_list)
                 fail_size = len(handler.fail_list)
             except Exception as e:
