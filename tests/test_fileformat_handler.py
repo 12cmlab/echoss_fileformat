@@ -3,7 +3,7 @@ import unittest
 import logging
 import os
 import time
-from echoss_fileformat.fileformat_handler import FileformatHandler
+from echoss_fileformat.fileformat_base import FileformatBase
 
 # configure the logger
 LOG_FORMAT = "%(asctime)s %(name)s %(levelname)s - %(message)s"
@@ -29,22 +29,8 @@ class FileformatHandlerTestCase(unittest.TestCase):
     """
     유닛 테스트 
     """
-    def test_make_kw_dict_empty(self):
-        handler = FileformatHandler()
-        kw_dict = {'abc': 'bcf'}
-        kw_dict = handler._make_kw_dict('load', kw_dict)
-
-        self.assertTrue('abc' not in kw_dict, "'abc' is not support keyword")
-        self.assertDictEqual(handler.support_kw['load'], kw_dict, "result dict is not copy of support_kw ")
-        self.assertEqual(handler.support_kw['load'], kw_dict, "Same as above?")
-
-    def test_make_kw_dict_success(self):
-        handler = FileformatHandler()
-        kw_dict = handler._make_kw_dict('load', {'encoding': 'ascii'})
-        self.assertEqual(kw_dict['encoding'], 'ascii', "check change key value")
-
     def test_get_file_obj_not_exist(self):
-        handler = FileformatHandler()
+        handler = FileformatBase()
 
         # not exist Directory and 'r'
         filename = 'test_data_wrong/complex_one.json'
@@ -86,7 +72,7 @@ class FileformatHandlerTestCase(unittest.TestCase):
             self.assertTrue(filename in str(e))
 
     def test_get_file_obj_open_mode_filename(self):
-        handler = FileformatHandler()
+        handler = FileformatBase()
 
         # not exist Directory and 'r'
         open_modes = ['r', 'w', 'rb', 'wb']
@@ -99,7 +85,7 @@ class FileformatHandlerTestCase(unittest.TestCase):
 
         line_list = []
         for filename, open_mode in zip(filenames, open_modes):
-            handler = FileformatHandler()
+            handler = FileformatBase()
             fp, mode, opened = handler._get_file_obj(filename, open_mode)
             logger.info(f"{fp=} {mode=} {opened=}")
 
@@ -128,7 +114,7 @@ class FileformatHandlerTestCase(unittest.TestCase):
         pass
 
     def test_get_file_obj_open_mode_file_obj(self):
-        handler = FileformatHandler()
+        handler = FileformatBase()
 
         # not exist Directory and 'r'
         open_modes = ['r', 'w', 'rb', 'wb']
@@ -147,7 +133,7 @@ class FileformatHandlerTestCase(unittest.TestCase):
 
         line_list = []
         for filename, open_mode, expect_instance in zip(filenames, open_modes, expect_instances):
-            handler = FileformatHandler()
+            handler = FileformatBase()
 
             if 'b' in open_mode:
                 fp = open(filename, open_mode)

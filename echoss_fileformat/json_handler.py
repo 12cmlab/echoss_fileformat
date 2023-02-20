@@ -1,6 +1,6 @@
 import logging
 
-from .fileformat_handler import FileformatHandler
+from .fileformat_base import FileformatBase
 import io
 import json
 import pandas as pd
@@ -11,7 +11,7 @@ from typing import Union, Dict, Literal
 logger = logging.getLogger(__name__)
 
 
-class JsonHandler(FileformatHandler):
+class JsonHandler(FileformatBase):
     """JSON file handler
 
     학습데이터로 JSON 파일은 전체가 'array' 이거나, object 의 특정 키 값이 'array' 라고 추정
@@ -22,15 +22,15 @@ class JsonHandler(FileformatHandler):
     TYPE_MULTILINE = 'multiline'
     TYPE_OBJECT = 'object'
 
-    # 실제 json 메쏘드 호출 시 지원하는 추가 키워드
-    support_kw = {
-        'load': {
-            'cls': None,
-        },
-        'dump:': {
-            'cls': None,
-        }
-    }
+    # # 실제 json 메쏘드 호출 시 지원하는 추가 키워드
+    # support_kw = {
+    #     'load': {
+    #         'cls': None,
+    #     },
+    #     'dump:': {
+    #         'cls': None,
+    #     }
+    # }
 
     def __init__(self, json_type: Union['array', 'multiline', 'object'], encoding='utf-8', error_log='error.log'):
         """Initialize json file format
@@ -42,18 +42,18 @@ class JsonHandler(FileformatHandler):
         self.json_type = json_type
         self.data_key = ''
 
-    def _append_json_data(self, json_obj) -> None:
-        """'multiline' json_type 내부메쏘드 data_obj 에 json_obj 추가
-
-        Args:
-            json_obj: 추가할 json object
-        """
-        if not self.data_key:
-            self.origin_obj.append(json_obj)
-        elif self.data_key in json_obj:
-            self.origin_obj.append(json_obj[self.data_key])
-        else:
-            self.failed_obj.append(json_obj)
+    # def _append_json_data(self, json_obj) -> None:
+    #     """'multiline' json_type 내부메쏘드 data_obj 에 json_obj 추가
+    #
+    #     Args:
+    #         json_obj: 추가할 json object
+    #     """
+    #     if not self.data_key:
+    #         self.origin_obj.append(json_obj)
+    #     elif self.data_key in json_obj:
+    #         self.origin_obj.append(json_obj[self.data_key])
+    #     else:
+    #         self.failed_obj.append(json_obj)
 
     # 내부 함수 for object and array json_type
     def _update_json_data(self, json_obj) -> None:
@@ -114,86 +114,44 @@ class JsonHandler(FileformatHandler):
             else:
                 return 'r'
 
-    def load(self, file_or_filename: Union[io.TextIOWrapper, io.BytesIO, str], data_key: str = '', **kwargs) -> None:
+    def load(self, file_or_filename: Union[io.TextIOWrapper, io.BytesIO, str], data_key: str = '') -> list:
         """파일 객체나 파일명에서 JSON 데이터 읽기
         Args:
             file_or_filename (file-like object): file or s3 stream object which support .read() function
             data_key (str): if empty use whole file, else use only key value. for example 'data'
         Returns:
-            json object (dict) if json_type is 'object'
-            array of dict if json_type is 'array' or 'multiline'
+            list of json object, which passing load json processings
         """
         self.data_key = data_key
-        kw_dict = self._make_kw_dict('load', kwargs)
+        # kw_dict = self._make_kw_dict('load', kwargs)
         open_mode = self._decide_rw_open_mode('load')
         # file_or_filename 클래스 유형에 따라서 처리 방법이 다름
-        fp, mode, opened = self._get_file_obj(file_or_filename, 'rb')
-        if isinstance(file_or_filename, str):
+        fp, mode, opened = self._get_file_obj(file_or_filename, open_mode)
+
+        if self.json_type == JsonHandler.TYPE_OBJECT or self.json_type == JsonHandler.TYPE_ARRAY:
             try:
-                fp = open(file_or_filename, 'r', encoding=self.encoding)
-                mode = 'text'
+                root_json = json.load(fp)
+                self._update_json_data(root_json)
             except Exception as e:
-                logger.error(f"{file_or_filename} is not exist filename or can not open by encoding={self.encoding}")
-                logger.exception(e)
-                return
-        elif isinstance(file_or_filename, io.TextIOWrapper):
-            fp = file_or_filename
-            mode = 'text'
-        elif isinstance(file_or_filename, io.BytesIO):
-            fp = file_or_filename
-            mode = 'binary'
-        elif isinstance(file_or_filename, io.BufferedIOBase):
-            fp = io.BytesIO(file_or_filename.read())
-            mode = 'binary'
-        else:
-            logger.error(f"{file_or_filename} is not file obj ")
-
-        if 'text' == mode:
-            if self.json_type == JsonHandler.TYPE_OBJECT or self.json_type == JsonHandler.TYPE_ARRAY:
+                file_bytes = fp.read()
+                self.fail_list.append(file_bytes)
+                logger.error(f"{fp=}, mode='{mode}' {opened=} json_type='{self.json_type}' load raise {e}")
+        elif self.json_type == JsonHandler.TYPE_MULTILINE:
+            for line in fp:
                 try:
-                    root_json = json.load(fp, **kw_dict)
-                    self._update_json_data(root_json)
+                    if 'text' == mode:
+                        line_str = line
+                    elif 'binary' == mode:
+                        line_str = line.decode(self.encoding)
+                    json_obj = json.loads(line_str)
+                    self._update_json_data(json_obj)
                 except Exception as e:
-                    file_bytes = fp.read()
-                    self.fail_list.append(file_bytes)
-                    logger.error(e)
-            elif self.json_type == JsonHandler.TYPE_MULTILINE:
-                for line_str in fp:
-                    try:
-                        json_obj = json.loads(line_str)
-                        self._update_json_data(json_obj)
-                    except Exception as e:
-                        self.fail_list.append(line_str)
-        elif 'binary' == mode:
-            if self.json_type == JsonHandler.TYPE_OBJECT or self.json_type == JsonHandler.TYPE_ARRAY:
-                try:
-                    root_json = json.load(fp, **kw_dict)
-                    self._update_json_data(root_json)
-                except Exception as e:
-                    file_bytes = fp.read()
-                    self.fail_list.append(file_bytes)
-                    logger.error(e)
-            if self.json_type == JsonHandler.TYPE_MULTILINE:
-                # try:
-                #     lines = fp.splitlines()
-                # except Exception as e:
-                #     logger.exception(e)
-                #     file_bytes = file_or_filename.read()
-                #     self.fail_list.append(file_bytes)
-                #     return
-                lines = fp
-
-                for line_bytes in lines:
-                    try:
-                        line_str = line_bytes.decode(self.encoding)
-                        json_obj = json.loads(line_str)
-                        self._update_json_data(json_obj)
-                    except Exception as e:
-                        self.fail_list.append(line_bytes)
-                        logger.exception(e)
+                    self.fail_list.append(line)
+                    logger.error(f"{fp=}, mode='{mode}' {opened=} json_type='{self.json_type}' load raise {e}")
         # close opened file if filename
-        if isinstance(file_or_filename, str) and fp:
+        if opened and fp:
             fp.close()
+        return self.pass_list
 
     def loads(self, str_or_bytes: Union[str, bytes]):
         """문자열이나 bytes 에서 JSON 객체 읽기
@@ -204,82 +162,18 @@ class JsonHandler(FileformatHandler):
             str_or_bytes (str, bytes): text모드 string 또는 binary모드 bytes
 
         """
-        if isinstance(str_or_bytes, str):
-            text_file = io.StringIO(str_or_bytes)
-            self.load(text_file)
-        elif isinstance(str_or_bytes, bytes):
-            binary_file = io.BytesIO(str_or_bytes)
-            self.load(binary_file)
+        try:
+            if isinstance(str_or_bytes, str):
+                file_obj = io.StringIO(str_or_bytes)
+            elif isinstance(str_or_bytes, bytes):
+                file_obj = io.BytesIO(str_or_bytes)
+        except Exception as e:
+            self.fail_list.append(str_or_bytes)
+            logger.error(f"'{str_or_bytes}' loads raise {e}")
+        finally:
+            return self.load(file_obj)
 
-    def get_tree_path(self, tree_path):
-        path_keys = [p for p in tree_path.split('/') if p]
-        if self.data:
-            json_obj = self.data
-            if JsonHandler.TYPE_OBJECT == self.json_type:
-                for key in path_keys:
-                    if key in json_obj:
-                        json_obj = json_obj[key]
-                    else:
-                        return None
-                return json_obj
-            elif JsonHandler.TYPE_ARRAY == self.json_type or JsonHandler.TYPE_MULTILINE == self.json_type:
-                results = []
-                json_list = self.data
-                for a in json_list:
-                    json_obj = a
-                    for key in path_keys:
-                        if key in json_obj:
-                            json_obj = json_obj[key]
-                        else:
-                            json_obj = None
-                            break
-                    if json_obj:
-                        results.append(json_obj)
-                return results
-        else:
-            logger.info(f"data is not exist")
-
-        if JsonHandler.TYPE_OBJECT == self.json_type:
-            return None
-        else:
-            return []
-
-    def to_pandas(self) -> pd.DataFrame:
-        """JSON 파일 처리 결과를 pd.DataFrame 형태로 받음
-
-        내부적으로 추가할 데이터(pass_list)가 있으면 추가하여 새로운 pd.DataFrame 생성
-        실패 목록(fail_list)가 있으면 파일로 저장
-        학습을 위한 dataframe 이기 떄문에 dot('.') 문자로 normalize 된 flatten 컬럼과 값을 가진다.
-
-        Returns: pandas 데이터프레임
-
-        """
-        if self.pass_list:
-            try:
-                append_df = pd.json_normalize(self.pass_list)
-                merge_df = pd.concat(self.data, append_df, ignore_index=True)
-                self.data = merge_df
-            except Exception as e:
-                logger.exception(e)
-                self.fail_list.extend(self.pass_list)
-            finally:
-                self.pass_list.clear()
-        if self.fail_list:
-            try:
-                fp = open(self.error_log, mode='ab')
-            except Exception as e:
-                logger.exception(e)
-
-            if fp:
-                for fail in self.fail_list:
-                    try:
-                        fp.write(fail + '\n')
-                    except Exception as e:
-                        logger.exception(e)
-                self.fail_list.clear()
-        return self.data
-
-    def dump(self, file_or_filename: Union[io.TextIOWrapper, io.BytesIO, str], data=None, **kwargs) -> None:
+    def dump(self, file_or_filename: Union[io.TextIOWrapper, io.BytesIO, str], data=None) -> None:
         """데이터를 JSON 파일로 쓰기
 
         파일은 text, binary 모드 파일객체이거나 파일명 문자열
@@ -290,53 +184,123 @@ class JsonHandler(FileformatHandler):
         Returns:
             없음
         """
-        if isinstance(file_or_filename, str):
+        fp = None
+        mode=''
+        opened=False
+        try:
+            open_mode = self._decide_rw_open_mode('dump')
+            # file_or_filename 클래스 유형에 따라서 처리 방법이 다름
+            fp, mode, opened = self._get_file_obj(file_or_filename, open_mode)
+
+            # data의 형태 구분: dataframe, list, object
+            if not data:
+                # dataframe 에 추가할 것 있으면 concat
+                data = self._to_pandas()
+        except Exception as e:
+            self.fail_list.append(data)
+            logger.error(f"{fp=}, mode='{mode}' {opened=} json_type='{self.json_type}' dump raise {e}")
+
+        if self.json_type == JsonHandler.TYPE_OBJECT:
             try:
-                fp = open(file_or_filename, 'w', encoding=self.encoding)
-                mode = 'text'
+                # data 형태에 관계없이 전체 저장
+                json.dump(data, fp)
             except Exception as e:
-                logger.error(
-                    f"{file_or_filename} is not exist filename or can not open by encoding={self.encoding}")
-                logger.exception(e)
-                return
-        elif isinstance(file_or_filename, io.TextIOWrapper):
-            fp = file_or_filename
-            mode = 'text'
-        elif isinstance(file_or_filename, io.BytesIO):
-            fp = file_or_filename
-            mode = 'binary'
-        elif isinstance(file_or_filename, io.BufferedIOBase):
-            fp = io.BytesIO(file_or_filename.read())
-            mode = 'binary'
-        else:
-            logger.error(f"{file_or_filename} is not file obj ")
+                self.fail_list.append(data)
+                logger.error(f"{fp=}, mode='{mode}' {opened=} json_type='{self.json_type}' dump raise {e}")
+        elif self.json_type == JsonHandler.TYPE_ARRAY:
+            try:
+                # dataframe -> json array
+                if isinstance(data, pd.DataFrame):
+                    json.dump(data, fp)
+                # data is list -> json array
+                elif isinstance(data, list):
+                    json.dump(data, fp)
+                # if use data_key case and list
+                elif isinstance(data, dict) and self.data_key and self.data_key in data:
+                    data_value = data[self.data_key]
+                    if isinstance(data_value, list):
+                        json.dump(data_value, fp)
+                else:
+                    logger.error(f"{fp=}, mode='{mode}' {opened=} json_type='{self.json_type}' but not list")
+            except Exception as e:
+                self.fail_list.append(data)
+                logger.error(f"{fp=}, mode='{mode}' {opened=} json_type='{self.json_type}' dump raise {e}")
+        elif self.json_type == JsonHandler.TYPE_MULTILINE:
+            try:
+                # dataframe -> json array
+                if isinstance(data, pd.DataFrame):
+                    data_list = data.to_dict('records')
+                # data is list -> json array
+                elif isinstance(data, list):
+                    data_list = data
+                # if use data_key case and list
+                elif isinstance(data, dict) and self.data_key and self.data_key in data:
+                    data_value = data[self.data_key]
+                    if isinstance(data_value, list):
+                        data_list = data_value
+                else:
+                    logger.error(f"{fp=}, mode='{mode}' {opened=} json_type='{self.json_type}' but can't multiline")
 
-        if data:
-            json.dump(file_or_filename, )
-        if self.data:
-            json.dump(self.data, file_or_filename)
+                if data_list and len(data_list) > 0:
+                    for row in data_list:
+                        try:
+                            json.dump(row, fp)
+                        except Exception as e:
+                            self.fail_list.append(row)
+                            logger.error(f"{fp=}, mode='{mode}' {opened=} json_type='{self.json_type}' raise {e}")
+            except Exception as e:
+                self.fail_list.append(data)
+                logger.error(f"{fp=}, mode='{mode}' {opened=} json_type='{self.json_type}' dump raise {e}")
 
-    def dumps(self):
-        if self.data:
-            return json.dumps(self.data)
+        if opened and fp:
+            fp.close()
 
-    # 'array' 나 'multiline' 유형으로 모두 같은 key:value 형태로 되어 있다고 가정
-    def to_pandas(self):
-        self.data_df = pd.DataFrame.from_dict(self.data)
-        return self.df
+    def dumps(self, mode: Literal['text', 'binary'] = 'text', data=None) -> Union[str, bytes]:
+        try:
+            if 'text' == mode:
+                file_obj = io.StringIO()
+            elif 'binary' == mode:
+                file_obj = io.BytesIO()
 
-    def to_csv(self, filename):
-        if self.data:
-            if self.data_dirty or not self.data_df:
-                self.to_pandas()
-                self.data_dirty = False
-
-            if self.data_df:
-                self.data_df.to_csv(filename, encoding=self.encoding, index=False)
-
-
-
-
-
+            self.dump(self.data, file_obj, data=data)
+            return file_obj.getvalue()
+        except Exception as e:
+            logger.error(f"mode='{mode}' json_type='{self.json_type}' dumps raise {e}")
 
 
+    """
+    클래스 내부 메쏘드 
+    """
+
+    def _to_pandas(self) -> pd.DataFrame:
+        """클래스 내부메쏘드 JSON 파일 처리 결과를 pd.DataFrame 형태로 받음
+
+        내부적으로 추가할 데이터(pass_list)가 있으면 추가하여 새로운 pd.DataFrame 생성
+        실패 목록(fail_list)가 있으면 파일로 저장
+        학습을 위한 dataframe 이기 떄문에 dot('.') 문자로 normalize 된 flatten 컬럼과 값을 가진다.
+
+        Returns: pandas DataFrame
+        """
+        if len(self.pass_list) > 0:
+            try:
+                append_df = pd.json_normalize(self.pass_list)
+                merge_df = pd.concat(self.data, append_df, ignore_index=True)
+                self.data = merge_df
+            except Exception as e:
+                logger.error(f"pass_list[{len(self.pass_list)}] _to_pandas raise {e}")
+                self.fail_list.extend(self.pass_list)
+            finally:
+                self.pass_list.clear()
+        if len(self.fail_list) > 0:
+            try:
+                with open(self.error_log, mode='ab') as error_fp:
+                    for fail in self.fail_list:
+                        try:
+                            error_fp.write(fail + '\n')
+                        except Exception as e:
+                            logger.exception(e)
+            except Exception as e:
+                logger.error(f"fail_list[{len(self.fail_list)}] error log append raise {e}")
+            finally:
+                self.fail_list.clear()
+        return self.data
