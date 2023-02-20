@@ -202,8 +202,30 @@ class JsonHandler(FileformatBase):
 
         if self.json_type == JsonHandler.TYPE_OBJECT:
             try:
-                # data 형태에 관계없이 전체 저장
-                json.dump(data, fp)
+                json_obj = None
+                # dataframe -> json object (dict)
+                if isinstance(data, pd.DataFrame):
+                    data_dict = data.to_dict('records')
+                    if isinstance(data_dict, list) and len(data_dict) > 0:
+                        json_obj = data_dict[0]
+                    elif isinstance(data_dict, dict):
+                        json_obj = data_dict
+                # data is list -> json array
+                elif isinstance(data, list):
+                    logger.error(f"{fp=}, mode='{mode}' {opened=} json_type='{self.json_type}' not dict but list")
+                elif isinstance(data, dict):
+                    json_obj = data
+
+                # if use data_key case and list
+                if json_obj and self.data_key:
+                    if self.data_key in json_obj:
+                        json_obj = data[self.data_key]
+                    else:
+                        logger.error(f"{fp=}, data_key={self.data_key} is not exist in {json_obj}")
+                if json_obj:
+                    json.dump(json_obj, fp)
+                else:
+                    logger.error(f"{fp=}, mode='{mode}' {opened=} json_type='{self.json_type}' but json object=None")
             except Exception as e:
                 self.fail_list.append(data)
                 logger.error(f"{fp=}, mode='{mode}' {opened=} json_type='{self.json_type}' dump raise {e}")
@@ -211,7 +233,7 @@ class JsonHandler(FileformatBase):
             try:
                 # dataframe -> json array
                 if isinstance(data, pd.DataFrame):
-                    json.dump(data, fp)
+                    data.to_json(fp, orient='records')
                 # data is list -> json array
                 elif isinstance(data, list):
                     json.dump(data, fp)
@@ -284,7 +306,7 @@ class JsonHandler(FileformatBase):
         if len(self.pass_list) > 0:
             try:
                 append_df = pd.json_normalize(self.pass_list)
-                merge_df = pd.concat(self.data, append_df, ignore_index=True)
+                merge_df = pd.concat([self.data, append_df], ignore_index=True)
                 self.data = merge_df
             except Exception as e:
                 logger.error(f"pass_list[{len(self.pass_list)}] _to_pandas raise {e}")
@@ -296,7 +318,8 @@ class JsonHandler(FileformatBase):
                 with open(self.error_log, mode='ab') as error_fp:
                     for fail in self.fail_list:
                         try:
-                            error_fp.write(fail + '\n')
+                            error_fp.write(fail)
+                            error_fp.write('\n')
                         except Exception as e:
                             logger.exception(e)
             except Exception as e:

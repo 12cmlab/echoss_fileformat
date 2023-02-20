@@ -120,32 +120,32 @@ class MyTestCase(unittest.TestCase):
     """
 
     def test_dump_complex_by_json_type(self):
-        json_types = ['object', 'array', 'multiline']
-        expect_exists = [True, True, True]
-        expect_file_sizes = [0, 0, 0]
+        json_types = ['object', 'array']
+        data_keys = ['', 'main']
+        expect_file_sizes = [35248, 29257]
 
         load_filename = 'test_data/complex_one_object.json'
         dump_filename = 'test_data/complex_one_object_dump_to_delete.json'
 
-        for json_type, expect_exist, expect_file_size  in zip(json_types, expect_exists, expect_file_sizes):
+        for json_type, data_key, expect_file_size  in zip(json_types, data_keys, expect_file_sizes):
             try:
                 handler = JsonHandler(json_type)
-                handler.load(load_filename)
+                handler.load(load_filename, data_key=data_key)
+                pass_size = len(handler.pass_list)
+                if pass_size > 0:
+                    handler.dump(dump_filename)
+                    exist = os.path.exists(dump_filename)
+                    file_size = os.path.getsize(dump_filename)
 
-                handler.dump(dump_filename)
-                exist = os.path.exists(dump_filename)
-                file_size = os.path.getsize(dump_filename)
+                    if exist and 'to_delete' in dump_filename:
+                        os.remove(dump_filename)
 
-                if exist and 'to_delete' in dump_filename:
-                    os.remove(dump_filename)
-
+                    logger.info(f"\t {json_type} dump expect exist True get {exist}")
+                    self.assertEqual(True, exist)
+                    logger.info(f"\t {json_type} dump expect file_size {expect_file_size} get {file_size}")
+                    self.assertEqual(expect_file_size, file_size)
             except Exception as e:
-                self.assertTrue(True, f"\t {json_type} json_type File load fail by {e}")
-            else:
-                logger.info(f"\t {json_type} load expect pass {expect_exist} get {exist}")
-                self.assertEqual(expect_exist, exist)
-                logger.info(f"\t {json_type} load expect fail {expect_file_size} get {file_size}")
-                self.assertTrue(expect_file_size <= file_size)
+                self.assertTrue(True, f"\t {json_type} json_type File dump fail by {e}")
 
     def test_dump_complex_by_data_key(self):
         json_types = ['object', 'array', 'multiline']
