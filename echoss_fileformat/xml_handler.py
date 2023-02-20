@@ -1,10 +1,10 @@
-from .fileformat_handler import FileformatHandler
+from .fileformat_base import FileformatBase
 import xml.etree.ElementTree as ET
 import io
 import pandas as pd
 
 
-class XmlHandler(FileformatHandler):
+class XmlHandler(FileformatBase):
     # 지원하는 추가 키워드
     KW_DICT = {
         'load': {

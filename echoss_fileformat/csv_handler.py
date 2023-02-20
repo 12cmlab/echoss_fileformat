@@ -1,4 +1,4 @@
-from .fileformat_handler import FileformatHandler
+from .fileformat_base import FileformatBase
 # pd 로 대체
 import pandas as pd
 # import csv
@@ -6,7 +6,7 @@ from typing import Union, Dict, Literal
 import io
 
 
-class CsvHandler(FileformatHandler):
+class CsvHandler(FileformatBase):
     """JSON file handler
 
     학습데이터로 JSON 파일은 전체가 'array' 이거나, object 의 특정 키 값이 'array' 라고 추정

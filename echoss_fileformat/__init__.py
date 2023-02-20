@@ -1,4 +1,4 @@
-from . import fileformat_handler
+from . import fileformat_base
 from . import csv_handler
 from . import json_handler
 from . import xml_handler

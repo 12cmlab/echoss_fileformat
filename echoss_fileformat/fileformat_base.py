@@ -9,17 +9,22 @@ import pandas as pd
 logger = logging.getLogger(__name__)
 
 
-class FileformatHandler:
-    """AI 학습을 위한 파일 포맷 지원
+class FileformatBase:
+    """AI 학습을 위한 파일 포맷 지원 기반 클래스
 
     JSON, CSV, XML and excel file format handler 부모 클래스
+    클래스 공통 내부 메쏘드를 제외하면 클래스 공개 메쏘드는 모두 자식 클래스에서 구현
+
+    클래스 공개 메쏘드는 AI학습에 필요한 최소한 기능에만 집중.
+    세부 기능과 다양한 확장은 관련 패키지를 직정 사용 권고
     """
-    support_kw: dict = {
-        'load': {
-        },
-        'dump:': {
-        }
-    }
+    # 최소기능에 집중하고 kwargs 관련 기능은 사용하지 않는 것으로 결정
+    # support_kw: dict = {
+    #     'load': {
+    #     },
+    #     'dump:': {
+    #     }
+    # }
 
     def __init__(self, encoding='utf-8', error_log='error.log'):
         """       
@@ -56,7 +61,7 @@ class FileformatHandler:
         pass
 
     def to_pandas(self) -> pd.DataFrame:
-        """파일 처리 결과를 pd.DataFrame 형태로 받음
+        """파일 처리 결과를 pd.DataFrame 형태로 받음.
 
         파일 포맷에 따라서 내부 구현이 달라짐
 
@@ -89,27 +94,52 @@ class FileformatHandler:
         """
         pass
 
+    def get_data(self, need_update = True) -> pd.DataFrame:
+        """dataframe data get
+
+        Args:
+            need_update (Bool): need_update (Bool): update processing pass_list and fail_list first? default True
+
+        Returns: data (pd.DataFrame)
+
+        """
+        if need_update:
+            df = self._to_pandas()
+        return df
+
+    def set_data(self, data: pd.DataFrame, need_update = True) -> None:
+        """dataframe data set
+
+        Args:
+            data (): set 할 dataframe
+            need_update (Bool): update processing pass_list and fail_list first? default True
+        """
+        if need_update:
+            self.to_pandas()
+        self.data = data
+
     """
     
     클래스 내부 메쏘드 
     
     """
 
-    def _make_kw_dict(self, method_type_name: str, kw_dict: dict) -> dict:
-        """내부 메쏘드로 서브클래스에 선언된 지원 키워드 사전 획득
-
-        Returns:
-            서브클래스의 지원 키워드 사전
-        """
-        copy_dict = {}
-        # handler_kw_dict = self.get_kw_dict()
-        if method_type_name in self.support_kw:
-            copy_dict = self.support_kw[method_type_name].copy()
-            for k in kw_dict:
-                if k in copy_dict:
-                    copy_dict[k] = kw_dict[k]
-            return copy_dict
-        return copy_dict
+    # 사용하는 았는 것으로 정리
+    # def _make_kw_dict(self, method_type_name: str, kw_dict: dict) -> dict:
+    #     """내부 메쏘드로 서브클래스에 선언된 지원 키워드 사전 획득
+    #
+    #     Returns:
+    #         서브클래스의 지원 키워드 사전
+    #     """
+    #     copy_dict = {}
+    #     # handler_kw_dict = self.get_kw_dict()
+    #     if method_type_name in self.support_kw:
+    #         copy_dict = self.support_kw[method_type_name].copy()
+    #         for k in kw_dict:
+    #             if k in copy_dict:
+    #                 copy_dict[k] = kw_dict[k]
+    #         return copy_dict
+    #     return copy_dict
 
     def _get_file_obj(self, file_or_filename, open_mode: str):
         """클래스 내부 메쏘드 file_or_filename 의 instance type을 확인하여 사용하기 편한 file object 로 변환
@@ -155,3 +185,8 @@ class FileformatHandler:
         else:
             raise TypeError(f"{file_or_filename} is not file obj")
         return fp, mode, opened
+
+    def _to_pandas(self):
+        """클래스 내부 메쏘드 처리 데이터를 dataframe 의 변환하여 저장. 자식 클래스에서 각각 구현
+        """
+        pass
