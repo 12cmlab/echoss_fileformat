@@ -15,6 +15,9 @@ class FileformatBase:
     JSON, CSV, XML and excel file format handler 부모 클래스
     클래스 공통 내부 메쏘드를 제외하면 클래스 공개 메쏘드는 모두 자식 클래스에서 구현
 
+    내부 자료 구조는 다를 수 있지만,
+    외부 연동은 pandas dataframe 만 사용함
+
     클래스 공개 메쏘드는 AI학습에 필요한 최소한 기능에만 집중.
     세부 기능과 다양한 확장은 관련 패키지를 직정 사용 권고
     """
