@@ -2,6 +2,7 @@ import unittest
 import time
 import logging
 import os
+from tabulate import tabulate
 
 from echoss_fileformat.csv_handler import CsvHandler
 
@@ -37,10 +38,20 @@ class MyTestCase(unittest.TestCase):
         expect_fail = 0
         try:
             handler = CsvHandler()
-            handler.load('test_data/simple_standard.csv')
+            handler.load('test_data/simple_standard.csv', header=0, skiprows=0)
             pass_size = len(handler.pass_list)
             fail_size = len(handler.fail_list)
+            csv_df = handler.to_pandas()
+            if csv_df is not None:
+                logger.info(csv_df.info())
+                logger.info("\n"+tabulate(csv_df.head(), headers='keys', tablefmt='psql'))
+                # print(csv_df.head().to_string(index=False, justify='left'))
+            else:
+                print('empty dataframe')
+            csv_str = handler.dumps(mode='text', quoting=0)
+            logger.info("\n["+csv_str+"\n]")
         except Exception as e:
+            logger.error(f"\t File load fail by {e}")
             self.assertTrue(True, f"\t File load fail by {e}")
         else:
             logger.info(f"\t load expect pass {expect_pass} get {pass_size}")

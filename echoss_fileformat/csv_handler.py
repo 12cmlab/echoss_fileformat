@@ -46,13 +46,15 @@ class CsvHandler(FileformatBase):
             df = pd.read_csv(
                 file_or_filename,
                 encoding=self.encoding,
-                delimiter=self.delimiter,
+                sep=self.delimiter,
                 quotechar=self.quotechar,
                 escapechar=self.escapechar,
                 header=header,
                 skiprows=skiprows,
                 nrows=nrows,
-                usecols=usecols
+                usecols=usecols,
+                infer_datetime_format=True,
+                on_bad_lines='warn'
             )
 
             self.pass_list.append(df)
@@ -101,7 +103,7 @@ class CsvHandler(FileformatBase):
         df.to_csv(
             file_or_filename,
             encoding=self.encoding,
-            delimiter=self.delimiter,
+            sep=self.delimiter,
             quotechar=self.quotechar,
             escapechar=self.escapechar,
             quoting=quoting
@@ -119,10 +121,9 @@ class CsvHandler(FileformatBase):
             없음
         """
         if not data:
-            df = self._to_pandas()
+            df = self.to_pandas()
         else:
             df = data
-
         if 'text' == mode:
             file_obj = io.StringIO()
         elif 'binary' == mode:
@@ -170,7 +171,7 @@ class CsvHandler(FileformatBase):
             raise TypeError(f"{file_or_filename} is not file-like obj")
         return fp, mode
 
-    def _to_pandas(self) -> pd.DataFrame:
+    def to_pandas(self) -> pd.DataFrame:
         """클래스 내부메쏘드 CSV 파일 처리 결과를 pd.DataFrame 형태로 pass_list 에 저장
 
         내부적으로 추가할 데이터(pass_list)가 있으면 모두 통합하여 새로운 dataframe 을 생성함
