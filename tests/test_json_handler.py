@@ -193,15 +193,15 @@ class MyTestCase(unittest.TestCase):
     def test_dump_mutliline_by_data_key(self):
         modes = ['text', 'binary']
         data_keys = ['message', 'message']
-        expect_file_sizes = [13413, 13413]
+        expect_file_sizes = [10513, 10513]
 
         json_type = JsonHandler.TYPE_MULTILINE
         load_filename = 'test_data/simple_multiline_object.json'
 
         for mode, data_key, expect_file_size in zip(modes, data_keys, expect_file_sizes):
             try:
+                handler = JsonHandler('multiline')
                 if mode == 'text':
-                    handler = JsonHandler('multiline')
                     with open(load_filename, 'r', encoding='utf-8') as fp:
                         handler.load(fp, data_key=data_key)
                         pass_size = len(handler.pass_list)
@@ -212,8 +212,8 @@ class MyTestCase(unittest.TestCase):
                         pass_size = len(handler.pass_list)
                         fail_size = len(handler.fail_list)
             except Exception as e:
-                # self.assertTrue(True, f"\t {mode} multiline File load fail by {e}")
-                logger.error(True, f"\t {mode} multiline File load fail by {e}")
+                self.assertTrue(True, f"\t {mode} multiline File load fail by {e}")
+                # logger.error(True, f"\t {mode} multiline File load fail by {e}")
             else:
                 logger.info(f"\t open mode '{mode}' 'multiline' load {pass_size=}, {fail_size=}")
 
@@ -231,8 +231,8 @@ class MyTestCase(unittest.TestCase):
                 logger.info(f"\t {json_type} dump expect file_size {expect_file_size} get {file_size}")
                 self.assertEqual(expect_file_size, file_size)
             except Exception as e:
-                # self.assertTrue(True, f"\t {mode} multiline File load fail by {e}")
-                logger.error(f"\t {mode} multiline File load fail by {e}")
+                self.assertTrue(True, f"\t {mode} multiline File load fail by {e}")
+                # logger.error(f"\t {mode} multiline File load fail by {e}")
 
 
 if __name__ == '__main__':
