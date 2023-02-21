@@ -121,28 +121,13 @@ class FileformatBase:
             self.to_pandas()
         self.data = data
 
+
     """
     
     클래스 내부 메쏘드 
     
     """
 
-    # 사용하는 았는 것으로 정리
-    # def _make_kw_dict(self, method_type_name: str, kw_dict: dict) -> dict:
-    #     """내부 메쏘드로 서브클래스에 선언된 지원 키워드 사전 획득
-    #
-    #     Returns:
-    #         서브클래스의 지원 키워드 사전
-    #     """
-    #     copy_dict = {}
-    #     # handler_kw_dict = self.get_kw_dict()
-    #     if method_type_name in self.support_kw:
-    #         copy_dict = self.support_kw[method_type_name].copy()
-    #         for k in kw_dict:
-    #             if k in copy_dict:
-    #                 copy_dict[k] = kw_dict[k]
-    #         return copy_dict
-    #     return copy_dict
 
     def _get_file_obj(self, file_or_filename, open_mode: str):
         """클래스 내부 메쏘드 file_or_filename 의 instance type을 확인하여 사용하기 편한 file object 로 변환
@@ -171,7 +156,10 @@ class FileformatBase:
         elif isinstance(file_or_filename, io.BufferedIOBase):
             fp = file_or_filename
             # fp = io.BytesIO(file_or_filename.read())
-            mode = 'binary'
+            if 'b' in fp.mode:
+                mode = 'binary'
+            else:
+                mode = 'text'
         elif isinstance(file_or_filename, str):
             try:
                 if 'b' in open_mode:
