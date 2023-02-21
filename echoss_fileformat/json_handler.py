@@ -63,15 +63,8 @@ class JsonHandler(FileformatBase):
                     elif 'binary' == mode:
                         line_str = line.decode(self.encoding)
                     line_obj = json.loads(line_str)
-                    if not data_key:
-                        json_obj = line_obj
-                    elif data_key in line_obj:
-                        json_obj = line_obj[data_key]
-                    else:
-                        json_obj = None
-                        self.fail_list.append(line)
-                    if json_obj:
-                        self._update_json_data(json_obj, data_key)
+                    if line_obj:
+                        self._update_json_data(line_obj, data_key)
                 except Exception as e:
                     self.fail_list.append(line)
                     logger.error(f"{fp=}, mode='{mode}' {opened=} json_type='{self.json_type}' load raise {e}")
@@ -140,8 +133,8 @@ class JsonHandler(FileformatBase):
                     logger.error(f"{fp=}, mode='{mode}' {opened=} '{self.json_type}' but {type(data)} is not list")
 
                 if data_key:
-                    dump_key = f"'{data_key}'"
-                    json.dump({dump_key: json_list}, fp)
+                    # dump_key = f"'{data_key}'"
+                    json.dump({data_key: json_list}, fp)
                 else:
                     json.dump(json_list, fp)
             except Exception as e:
@@ -168,8 +161,8 @@ class JsonHandler(FileformatBase):
                     for row in json_list:
                         try:
                             if data_key:
-                                dump_key = f"'{data_key}'"
-                                json_obj = {dump_key: row}
+                                # dump_key = f"'{data_key}'"
+                                json_obj = {data_key: row}
                             else:
                                 json_obj = row
 
@@ -273,11 +266,11 @@ class JsonHandler(FileformatBase):
                             fail_str = json.dumps(fail, ensure_ascii=False, separators=(',', ':'))
                         elif isinstance(fail, list):
                             fail_str = str(fail)
-                        else:
+                        elif not isinstance(fail, str):
                             fail_str = str(fail)
                         fail_bytes = fail_str.encode(self.encoding)
                         error_fp.write(fail_bytes)
-                        error_fp.write('\n')
+                        error_fp.write(b'\n')
                     except Exception as e:
                         logger.exception(e)
                 error_fp.close()
@@ -292,35 +285,37 @@ class JsonHandler(FileformatBase):
             json_obj: 설정할 json object
 
         """
-        if self.json_type == JsonHandler.TYPE_ARRAY:
-            # 전체가 배열일 경우
-            if not data_key:
-                json_array = json_obj
-            # 전체는 객체이지만 data_key 가 배열일 경우
-            elif data_key in json_obj:
-                json_array = json_obj[data_key]
+        # data_key 처리
+        if data_key:
+            if data_key in json_obj:
+                json_value = json_obj[data_key]
+                if isinstance(json_value, str):
+                    json_obj = json.loads(json_value)
+                elif isinstance(json_value, dict):
+                    pass
+                else:
+                    self.fail_list.append(json_obj)
+                    raise TypeError(f"json_obj['{data_key}'] {type(json_value)} not supported")
             else:
+                self.fail_list.append(json_obj)
                 raise TypeError(f"json_obj['{data_key}'] must exist")
+
+        # json_obj 처리
+        if self.json_type == JsonHandler.TYPE_ARRAY:
             # json_array 가 진짜 array (list) 인지 검사
             if isinstance(json_obj, list):
-                self.pass_list.extend(json_array)
+                self.pass_list.extend(json_obj)
             else:
-                self.fail_list.append(json_array)
-                raise TypeError(f"json_obj['{data_key}'] must be a list")
+                self.fail_list.append(json_obj)
+                raise TypeError(f"json_obj['{data_key}'] in {self.json_type=} must be a list")
         elif self.json_type == JsonHandler.TYPE_MULTILINE:
-            if not data_key:
+            if isinstance(json_obj, dict):
                 self.pass_list.append(json_obj)
-            elif data_key in json_obj:
-                self.pass_list.append(json_obj[data_key])
             else:
                 self.fail_list.append(json_obj)
+                raise TypeError(f"json_obj['{data_key}'] in {self.json_type=} must be a dict")
         elif self.json_type == JsonHandler.TYPE_OBJECT:
-            if not data_key:
-                self.pass_list.append(json_obj)
-            elif data_key in json_obj:
-                self.pass_list.append(json_obj[data_key])
-            else:
-                self.fail_list.append(json_obj)
+            self.pass_list.append(json_obj)
 
     def _decide_rw_open_mode(self, method_name) -> str :
         """내부메쏘드 json_type 과 method_name 에 따라서 파일 일기/쓰기 오픈 모드 결정
