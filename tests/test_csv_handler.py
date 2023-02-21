@@ -55,7 +55,7 @@ class MyTestCase(unittest.TestCase):
 
         for json_type, expect_pass, expect_fail in zip(json_types, expect_passes, expect_fails):
             try:
-                handler = JsonHandler(json_type)
+                handler = CsvHandler(json_type)
                 handler.load('test_data/complex_one_object.json', data_key='main')
                 pass_size = len(handler.pass_list)
                 fail_size = len(handler.fail_list)
@@ -74,7 +74,7 @@ class MyTestCase(unittest.TestCase):
 
         for mode, expect_pass, expect_fail in zip(modes, expect_passes, expect_fails):
             try:
-                handler = JsonHandler('multiline')
+                handler = CsvHandler('multiline')
                 if mode == 'text':
                     with open('test_data/simple_multiline_object.json', 'r', encoding='utf-8') as fp:
                         handler.load(fp)
@@ -100,7 +100,7 @@ class MyTestCase(unittest.TestCase):
 
         for json_type, expect_pass, expect_fail in zip(json_types, expect_passes, expect_fails):
             try:
-                handler = JsonHandler(json_type)
+                handler = CsvHandler(json_type)
                 handler.load('test_data/simple_multiline_object.json', data_key='message')
                 pass_size = len(handler.pass_list)
                 fail_size = len(handler.fail_list)
@@ -126,7 +126,7 @@ class MyTestCase(unittest.TestCase):
 
         for json_type, data_key, expect_file_size  in zip(json_types, data_keys, expect_file_sizes):
             try:
-                handler = JsonHandler(json_type)
+                handler = CsvHandler(json_type)
                 handler.load(load_filename, data_key=data_key)
                 pass_size = len(handler.pass_list)
                 if pass_size > 0:
@@ -149,12 +149,12 @@ class MyTestCase(unittest.TestCase):
         modes = ['text', 'binary']
         expect_file_sizes = [13413, 13413]
 
-        json_type = JsonHandler.TYPE_MULTILINE
+        json_type = CsvHandler.TYPE_MULTILINE
         load_filename = 'test_data/simple_multiline_object.json'
 
         for mode, expect_file_size in zip(modes, expect_file_sizes):
             try:
-                handler = JsonHandler('multiline')
+                handler = CsvHandler('multiline')
                 if mode == 'text':
                     with open(load_filename, 'r', encoding='utf-8') as fp:
                         handler.load(fp)
@@ -192,12 +192,12 @@ class MyTestCase(unittest.TestCase):
         data_keys = ['message', 'message']
         expect_file_sizes = [10513, 10513]
 
-        json_type = JsonHandler.TYPE_MULTILINE
+        json_type = CsvHandler.TYPE_MULTILINE
         load_filename = 'test_data/simple_multiline_object.json'
 
         for mode, data_key, expect_file_size in zip(modes, data_keys, expect_file_sizes):
             try:
-                handler = JsonHandler('multiline')
+                handler = CsvHandler('multiline')
                 if mode == 'text':
                     with open(load_filename, 'r', encoding='utf-8') as fp:
                         handler.load(fp, data_key=data_key)
