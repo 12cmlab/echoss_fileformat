@@ -35,7 +35,7 @@ class FileformatBase:
             encoding: 파일 인코팅 
             error_log: 파일 처리 실패 시 에러 저장 파일명 
         """
-        self.data = pd.DataFrame()
+        self.data_df = pd.DataFrame()
         self.encoding = encoding
         self.error_log = error_log
         self.pass_list = []
@@ -93,11 +93,11 @@ class FileformatBase:
             mode (): 출력 모드 'text' 또는 'binary' 선택
             data (): 출력할 데이터, 생략되면 self.data 사용
         Returns:
-            데이터를 text모드에서는 문자열, 'binary'모드에서는 bytes로 출력
+            데이터를 text 모드에서는 str, 'binary' 모드에서는 bytes 타입 출력
         """
         pass
 
-    def get_data(self, need_update = True) -> pd.DataFrame:
+    def get_data(self, need_update=True) -> pd.DataFrame:
         """dataframe data get
 
         Args:
@@ -110,7 +110,7 @@ class FileformatBase:
             df = self._to_pandas()
         return df
 
-    def set_data(self, data: pd.DataFrame, need_update = True) -> None:
+    def set_data(self, data: pd.DataFrame, need_update=True) -> None:
         """dataframe data set
 
         Args:
@@ -119,7 +119,8 @@ class FileformatBase:
         """
         if need_update:
             self.to_pandas()
-        self.data = data
+        if isinstance(data, pd.DataFrame):
+            self.data_df = data
 
 
     """
@@ -127,7 +128,6 @@ class FileformatBase:
     클래스 내부 메쏘드 
     
     """
-
 
     def _get_file_obj(self, file_or_filename, open_mode: str):
         """클래스 내부 메쏘드 file_or_filename 의 instance type을 확인하여 사용하기 편한 file object 로 변환
@@ -176,8 +176,3 @@ class FileformatBase:
         else:
             raise TypeError(f"{file_or_filename} is not file obj")
         return fp, mode, opened
-
-    def _to_pandas(self):
-        """클래스 내부 메쏘드 처리 데이터를 dataframe 의 변환하여 저장. 자식 클래스에서 각각 구현
-        """
-        pass

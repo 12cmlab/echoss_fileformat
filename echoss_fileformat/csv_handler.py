@@ -96,7 +96,7 @@ class CsvHandler(FileformatBase):
             data: dataframe 으로 설정시 사용. 기존 유틸리티의 호환성을 위해서 남김
         """
         if not data:
-            df = self._to_pandas()
+            df = self.to_pandas()
         else:
             df = data
 
@@ -106,7 +106,8 @@ class CsvHandler(FileformatBase):
             sep=self.delimiter,
             quotechar=self.quotechar,
             escapechar=self.escapechar,
-            quoting=quoting
+            quoting=quoting,
+            index=False
         )
 
     def dumps(self, mode: Literal['text','binary'] = 'text', quoting=0, data: pd.DataFrame = None) -> Union[str, bytes]:
@@ -120,10 +121,6 @@ class CsvHandler(FileformatBase):
         Returns:
             없음
         """
-        if not data:
-            df = self.to_pandas()
-        else:
-            df = data
         if 'text' == mode:
             file_obj = io.StringIO()
         elif 'binary' == mode:
@@ -182,12 +179,12 @@ class CsvHandler(FileformatBase):
         """
         if len(self.pass_list) > 0:
             try:
-                if len(self.data) > 0:
-                    df_list = [self.data].extend(self.pass_list)
+                if len(self.data_df) > 0:
+                    df_list = [self.data_df].extend(self.pass_list)
                 else:
                     df_list = self.pass_list
                 merge_df = pd.concat(df_list, ignore_index=True)
-                self.data = merge_df
+                self.data_df = merge_df
             except Exception as e:
                 logger.error(f"pass_list[{len(self.pass_list)}] _to_pandas raise {e}")
                 self.fail_list.extend(self.pass_list)
@@ -215,4 +212,4 @@ class CsvHandler(FileformatBase):
                         logger.exception(e)
                 error_fp.close()
                 self.fail_list.clear()
-        return self.data
+        return self.data_df
