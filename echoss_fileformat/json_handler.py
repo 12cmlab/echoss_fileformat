@@ -1,9 +1,7 @@
-import logging
-
 import io
 import json
+import logging
 import pandas as pd
-# import numpy as np
 from typing import Union, Dict, Literal
 
 from .fileformat_base import FileformatBase
@@ -327,11 +325,12 @@ class JsonHandler(FileformatBase):
 
     def _decide_rw_open_mode(self, method_name) -> str:
         """내부메쏘드 json_type 과 method_name 에 따라서 파일 일기/쓰기 오픈 모드 결정
+        메쏘드에 입력된 매개변수가 filename 이라서 open() 호출 시에 mode 문자열을 결정하기위해서 사용
 
         Args:
             method_name: 'load' or 'dump'
 
-        Returns: 'r', 'w', 'rb', 'wb'
+        Returns: Literal['r', 'w', 'rb', 'wb']
         """
         if 'dump' == method_name:
             if self.json_type == JsonHandler.TYPE_MULTILINE:
