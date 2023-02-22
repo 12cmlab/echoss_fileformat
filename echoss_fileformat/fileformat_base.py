@@ -3,8 +3,8 @@
 """
 import io
 import logging
-from typing import Union, Dict, Literal
 import pandas as pd
+from typing import Union, Dict, Literal
 
 logger = logging.getLogger(__name__)
 

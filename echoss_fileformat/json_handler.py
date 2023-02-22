@@ -1,12 +1,12 @@
 import logging
 
-from .fileformat_base import FileformatBase
 import io
 import json
 import pandas as pd
 # import numpy as np
 from typing import Union, Dict, Literal
 
+from .fileformat_base import FileformatBase
 
 logger = logging.getLogger(__name__)
 
