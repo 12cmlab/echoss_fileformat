@@ -93,6 +93,53 @@ class JsonHandler(FileformatBase):
             self.fail_list.append(str_or_bytes)
             logger.error(f"'{str_or_bytes}' loads raise {e}")
 
+    def to_pandas(self) -> pd.DataFrame:
+        """클래스 내부메쏘드 JSON 파일 처리 결과를 pd.DataFrame 형태로 받음
+
+        내부적으로 추가할 데이터(pass_list)가 있으면 추가하여 새로운 pd.DataFrame 생성
+        실패 목록(fail_list)가 있으면 파일로 저장
+        학습을 위한 dataframe 이기 떄문에 dot('.') 문자로 normalize 된 flatten 컬럼과 값을 가진다.
+
+        Returns: pandas DataFrame
+        """
+        if len(self.pass_list) > 0:
+            try:
+                append_df = pd.json_normalize(self.pass_list)
+                merge_df = pd.concat([self.data_df, append_df], ignore_index=True)
+                self.data_df = merge_df
+            except Exception as e:
+                logger.error(f"pass_list[{len(self.pass_list)}] to_pandas raise {e}")
+                self.fail_list.extend(self.pass_list)
+            finally:
+                self.pass_list.clear()
+        if len(self.fail_list) > 0:
+            error_fp = None
+            try:
+                error_fp = open(self.error_log, mode='ab')
+            except Exception as e:
+                logger.error(f"fail_list[{len(self.fail_list)}] error log append raise {e}")
+
+            if error_fp:
+                for fail in self.fail_list:
+                    try:
+                        fail_str = None
+                        if isinstance(fail, dict):
+                            fail_str = json.dumps(fail, ensure_ascii=False, separators=(',', ':'))
+                        elif isinstance(fail, list):
+                            fail_str = str(fail)
+                        elif not isinstance(fail, str):
+                            fail_str = str(fail)
+
+                        if fail_str:
+                            fail_bytes = fail_str.encode(self.encoding)
+                            error_fp.write(fail_bytes)
+                            error_fp.write(b'\n')
+                    except Exception as e:
+                        logger.exception(e)
+                error_fp.close()
+                self.fail_list.clear()
+        return self.data_df
+
     def dump(self, file_or_filename: Union[io.TextIOWrapper, io.BytesIO, str], data=None, data_key=None) -> None:
         """데이터를 JSON 파일로 쓰기
 
@@ -114,7 +161,7 @@ class JsonHandler(FileformatBase):
             fp, mode, opened = self._get_file_obj(file_or_filename, open_mode)
             if not data:
                 # dataframe 에 추가할 것 있으면 concat
-                data = self._to_pandas()
+                data = self.to_pandas()
         except Exception as e:
             self.fail_list.append(data)
             logger.error(f"{fp=}, mode='{mode}' {opened=} '{self.json_type}' dump raise {e}")
@@ -237,53 +284,6 @@ class JsonHandler(FileformatBase):
     """
     클래스 내부 메쏘드 
     """
-
-    def _to_pandas(self) -> pd.DataFrame:
-        """클래스 내부메쏘드 JSON 파일 처리 결과를 pd.DataFrame 형태로 받음
-
-        내부적으로 추가할 데이터(pass_list)가 있으면 추가하여 새로운 pd.DataFrame 생성
-        실패 목록(fail_list)가 있으면 파일로 저장
-        학습을 위한 dataframe 이기 떄문에 dot('.') 문자로 normalize 된 flatten 컬럼과 값을 가진다.
-
-        Returns: pandas DataFrame
-        """
-        if len(self.pass_list) > 0:
-            try:
-                append_df = pd.json_normalize(self.pass_list)
-                merge_df = pd.concat([self.data_df, append_df], ignore_index=True)
-                self.data_df = merge_df
-            except Exception as e:
-                logger.error(f"pass_list[{len(self.pass_list)}] _to_pandas raise {e}")
-                self.fail_list.extend(self.pass_list)
-            finally:
-                self.pass_list.clear()
-        if len(self.fail_list) > 0:
-            error_fp = None
-            try:
-                error_fp = open(self.error_log, mode='ab')
-            except Exception as e:
-                logger.error(f"fail_list[{len(self.fail_list)}] error log append raise {e}")
-
-            if error_fp:
-                for fail in self.fail_list:
-                    try:
-                        fail_str = None
-                        if isinstance(fail, dict):
-                            fail_str = json.dumps(fail, ensure_ascii=False, separators=(',', ':'))
-                        elif isinstance(fail, list):
-                            fail_str = str(fail)
-                        elif not isinstance(fail, str):
-                            fail_str = str(fail)
-
-                        if fail_str:
-                            fail_bytes = fail_str.encode(self.encoding)
-                            error_fp.write(fail_bytes)
-                            error_fp.write(b'\n')
-                    except Exception as e:
-                        logger.exception(e)
-                error_fp.close()
-                self.fail_list.clear()
-        return self.data_df
 
     # 내부 함수 for object and array json_type
     def _update_json_data(self, json_obj, data_key) -> None:
