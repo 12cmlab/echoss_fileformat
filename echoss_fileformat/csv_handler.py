@@ -84,6 +84,52 @@ class CsvHandler(FileformatBase):
             self.fail_list.append(str_or_bytes)
             logger.error(f"'{str_or_bytes}' loads raise {e}")
 
+    def to_pandas(self) -> pd.DataFrame:
+        """클래스 내부메쏘드 CSV 파일 처리 결과를 pd.DataFrame 형태로 pass_list 에 저장
+
+        내부적으로 추가할 데이터(pass_list)가 있으면 모두 통합하여 새로운 dataframe 을 생성함
+        실패 목록(fail_list)가 있으면 파일로 저장
+        학습을 위한 dataframe 이기 떄문에 dot('.') 문자로 normalize 된 flatten 컬럼과 값을 가진다.
+
+        Returns: pandas DataFrame
+        """
+        if len(self.pass_list) > 0:
+            try:
+                if len(self.data_df) > 0:
+                    df_list = [self.data_df].extend(self.pass_list)
+                else:
+                    df_list = self.pass_list
+                merge_df = pd.concat(df_list, ignore_index=True)
+                self.data_df = merge_df
+            except Exception as e:
+                logger.error(f"pass_list[{len(self.pass_list)}] _to_pandas raise {e}")
+                self.fail_list.extend(self.pass_list)
+            finally:
+                self.pass_list.clear()
+
+        if len(self.fail_list) > 0:
+            error_fp = None
+            try:
+                error_fp = open(self.error_log, mode='ab')
+            except Exception as e:
+                logger.error(f"fail_list[{len(self.fail_list)}] error log append raise {e}")
+
+            if error_fp:
+                for fail in self.fail_list:
+                    try:
+                        if not isinstance(fail, str):
+                            fail_str = str(fail)
+                        else:
+                            fail_str = fail
+                        fail_bytes = fail_str.encode(self.encoding)
+                        error_fp.write(fail_bytes)
+                        error_fp.write(b'\n')
+                    except Exception as e:
+                        logger.exception(e)
+                error_fp.close()
+                self.fail_list.clear()
+        return self.data_df
+
     def dump(self, file_or_filename, quoting=0, data: pd.DataFrame = None):
         """데이터를 CSV 파일로 쓰기
 
@@ -166,50 +212,6 @@ class CsvHandler(FileformatBase):
         # elif isinstance(file_or_filename, Path)  # 향후 pathlib.Path 객체 사용 검토
         else:
             raise TypeError(f"{file_or_filename} is not file-like obj")
-        return fp, mode
+        return mode
 
-    def to_pandas(self) -> pd.DataFrame:
-        """클래스 내부메쏘드 CSV 파일 처리 결과를 pd.DataFrame 형태로 pass_list 에 저장
 
-        내부적으로 추가할 데이터(pass_list)가 있으면 모두 통합하여 새로운 dataframe 을 생성함
-        실패 목록(fail_list)가 있으면 파일로 저장
-        학습을 위한 dataframe 이기 떄문에 dot('.') 문자로 normalize 된 flatten 컬럼과 값을 가진다.
-
-        Returns: pandas DataFrame
-        """
-        if len(self.pass_list) > 0:
-            try:
-                if len(self.data_df) > 0:
-                    df_list = [self.data_df].extend(self.pass_list)
-                else:
-                    df_list = self.pass_list
-                merge_df = pd.concat(df_list, ignore_index=True)
-                self.data_df = merge_df
-            except Exception as e:
-                logger.error(f"pass_list[{len(self.pass_list)}] _to_pandas raise {e}")
-                self.fail_list.extend(self.pass_list)
-            finally:
-                self.pass_list.clear()
-
-        if len(self.fail_list) > 0:
-            error_fp = None
-            try:
-                error_fp = open(self.error_log, mode='ab')
-            except Exception as e:
-                logger.error(f"fail_list[{len(self.fail_list)}] error log append raise {e}")
-
-            if error_fp:
-                for fail in self.fail_list:
-                    try:
-                        if not isinstance(fail, str):
-                            fail_str = str(fail)
-                        else:
-                            fail_str = fail
-                        fail_bytes = fail_str.encode(self.encoding)
-                        error_fp.write(fail_bytes)
-                        error_fp.write(b'\n')
-                    except Exception as e:
-                        logger.exception(e)
-                error_fp.close()
-                self.fail_list.clear()
-        return self.data_df

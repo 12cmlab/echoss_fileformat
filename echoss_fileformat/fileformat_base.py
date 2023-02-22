@@ -130,14 +130,18 @@ class FileformatBase:
     """
 
     def _get_file_obj(self, file_or_filename, open_mode: str):
-        """클래스 내부 메쏘드 file_or_filename 의 instance type을 확인하여 사용하기 편한 file object 로 변환
+        """클래스 내부 메쏘드 file_or_filename 의 instance type 을 확인하여 사용하기 편한 file object 로 변환
 
         Args:
             file_or_filename: file 관련 객체 또는 filename
 
+            open_mode(): Literal['r', 'w', 'a', 'rb', 'wb', 'ab']
+
         Returns: file_obj, mode, opened
             file_obj: file object to read, write and split lines
+
             mode: 'text' or 'binary'
+
             opened: True if file is opened in this method, False else
         """
         # file_or_filename 클래스 유형에 따라서 처리 방법이 다름
