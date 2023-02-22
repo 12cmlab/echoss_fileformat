@@ -99,7 +99,7 @@ class JsonHandler(FileformatBase):
         파일은 text, binary 모드 파일객체이거나 파일명 문자열
         Args:
             file_or_filename (file, str): 파일객체 또는 파일명, text 모드는 TextIOWrapper, binary 모드는 BytesIO 사용
-            data: use this data instead of self.data if provide 기능 확장성과 호환성을 위해서 남김
+            data: use this data instead of self.data_df if provide 기능 확장성과 호환성을 위해서 남김
             data_key (str): if empty use whole file, else use only key value. for example 'data'
 
         Returns:
@@ -215,7 +215,7 @@ class JsonHandler(FileformatBase):
         파일은 text, binary 모드 파일객체이거나 파일명 문자열
         Args:
             mode (str): 출력 모드 'text' 또는 'binary' 선택
-            data (): 출력할 데이터, 생략되면 self.data 사용
+            data (): 출력할 데이터, 생략되면 self.data_df 사용
             data_key (str): 출력을 json object 로 한번 더 감쌀 경우에 사용
 
         Returns:
@@ -250,8 +250,8 @@ class JsonHandler(FileformatBase):
         if len(self.pass_list) > 0:
             try:
                 append_df = pd.json_normalize(self.pass_list)
-                merge_df = pd.concat([self.data, append_df], ignore_index=True)
-                self.data = merge_df
+                merge_df = pd.concat([self.data_df, append_df], ignore_index=True)
+                self.data_df = merge_df
             except Exception as e:
                 logger.error(f"pass_list[{len(self.pass_list)}] _to_pandas raise {e}")
                 self.fail_list.extend(self.pass_list)
@@ -283,7 +283,7 @@ class JsonHandler(FileformatBase):
                         logger.exception(e)
                 error_fp.close()
                 self.fail_list.clear()
-        return self.data
+        return self.data_df
 
     # 내부 함수 for object and array json_type
     def _update_json_data(self, json_obj, data_key) -> None:

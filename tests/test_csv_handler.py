@@ -43,13 +43,26 @@ class MyTestCase(unittest.TestCase):
             fail_size = len(handler.fail_list)
             csv_df = handler.to_pandas()
             if csv_df is not None:
-                logger.info(csv_df.info())
+                csv_df.info()
                 logger.info("\n"+tabulate(csv_df.head(), headers='keys', tablefmt='psql'))
                 # print(csv_df.head().to_string(index=False, justify='left'))
             else:
-                print('empty dataframe')
+                logger.info('empty dataframe')
+            expect_csv_str = "SEQ_NO,PROMTN_TY_CD,PROMTN_TY_NM,BRAND_NM,SVC_NM,ISSU_CO,PARTCPTN_CO,PSNBY_ISSU_CO,COUPON_CRTFC_CO,COUPON_USE_RT\r\n"+"0,9,대만프로모션발급인증통계,77chocolate,S0013,15,15,1.0,15,1.0"
             csv_str = handler.dumps(mode='text', quoting=0)
-            logger.info("\n["+csv_str+"\n]")
+            # logger.info("[\n"+csv_str+"]")
+            expect_file_size = 17827
+            self.assertTrue(csv_str.startswith(expect_csv_str), "startswith fail")
+            TEMP_FILE = 'test_data/simple_standard_to_delete.csv'
+            handler.dump(TEMP_FILE)
+            exist = os.path.exists(TEMP_FILE)
+            file_size = os.path.getsize(TEMP_FILE)
+            if exist and 'to_delete' in TEMP_FILE:
+                os.remove(TEMP_FILE)
+
+            logger.info(f"\t {handler} dump expect exist True get {exist}")
+            logger.info(f"\t {handler} dump expect file_size {expect_file_size} get {file_size}")
+
         except Exception as e:
             logger.error(f"\t File load fail by {e}")
             self.assertTrue(True, f"\t File load fail by {e}")
