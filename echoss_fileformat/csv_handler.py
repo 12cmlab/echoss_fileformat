@@ -1,8 +1,9 @@
-from .fileformat_base import FileformatBase
 import io
 import logging
 import pandas as pd
 from typing import Union, Dict, Literal
+
+from .fileformat_base import FileformatBase
 
 logger = logging.getLogger(__name__)
 
@@ -163,7 +164,7 @@ class CsvHandler(FileformatBase):
         Args:
             mode (str): 출력 모드 'text' 또는 'binary' 선택
             quoting (int): 인용문자 사용 빈도에 대한 정책 0: QUOTE_MINIMAL, 1: QUOTE_ALL, 2: QUOTE_NONNUMERIC, 3: QUOTE_NONE
-            data: use this data instead of self.data if provide 기능 확장성과 호환성을 위해서 남김
+            data: 내장 dataframe 대신 사용할 data. 기능 확장성과 호환성을 위해서 남김
         Returns:
             없음
         """
