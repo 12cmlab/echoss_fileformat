@@ -4,7 +4,7 @@
 import io
 import logging
 import pandas as pd
-from typing import Union, Dict, Literal
+from typing import Dict, Literal, Optional, Union
 
 logger = logging.getLogger(__name__)
 
@@ -18,53 +18,60 @@ class FileformatBase:
     내부 자료 구조는 다를 수 있지만,
     외부 연동은 pandas dataframe 만 사용함
 
-    클래스 공개 메쏘드는 AI학습에 필요한 최소한 기능에만 집중.
+    클래스 공개 메쏘드는 AI 학습에 필요한 최소한 기능에만 집중.
     세부 기능과 다양한 확장은 관련 패키지를 직정 사용 권고
-    """
-    # 최소기능에 집중하고 kwargs 관련 기능은 사용하지 않는 것으로 결정
-    # support_kw: dict = {
-    #     'load': {
-    #     },
-    #     'dump:': {
-    #     }
-    # }
 
-    def __init__(self, encoding='utf-8', error_log='error.log'):
+    학습데이터로는 processing_type 'array' 와 'multiline' 만 사용 권고
+
+    'array' 는 전체 객체가 array 형태로 list of dictionary 로 누적 처리
+    'multiline' JSON 파일에서만 사용. 파일의 각 줄을 하나의 JSON object(dict) 형태로  읽어서 누적 처리
+
+    특정 키만 학습데이터로 사용할 경우에는 자식클래스 구현마다 다름. data_key 또는 usecols 사용
+
+    'object' 는 학습데이터가 아닌 메타 정보 파일에만 사용 권고. 처리 후에 내부 저장하지 않고 즉시 1개의 객체(구현마다 다름)로 리턴
+    """
+    TYPE_ARRAY = 'array'
+    TYPE_MULTILINE = 'multiline'
+    TYPE_OBJECT = 'object'
+
+    def __init__(self, processing_type='array', encoding='utf-8', error_log='error.log'):
         """       
         Args:
+            processing_type (): Literal['array', 'multiline', 'object']
             encoding: 파일 인코팅 
             error_log: 파일 처리 실패 시 에러 저장 파일명 
         """
+        self.processing_type = processing_type;
         self.data_df = pd.DataFrame()
         self.encoding = encoding
         self.error_log = error_log
         self.pass_list = []
         self.fail_list = []
 
-    def load(self, file_or_filename: Union[io.TextIOWrapper, io.BytesIO, str]):
+    def load(self, file_or_filename: Union[io.TextIOWrapper, io.BytesIO, str]) -> Optional[object]:
         """파일에서 데이터를 읽기
 
         파일 처리 결과는 객체 내부에 성공 목록과 실패 목록으로 저장됨
 
         Args:
-            file_or_filename (file, str): 파일객체 또는 파일명, 파일객체는 text모드는 TextIOWrapper, binary모드는 BytestIO사용
+            file_or_filename (file, str): 파일객체 또는 파일명
 
         """
         pass
 
-    def loads(self, str_or_bytes: Union[str, bytes]):
-        """문자열이나 binary을 데이터 읽기
+    def loads(self, str_or_bytes: Union[str, bytes])  -> Optional[object]:
+        """문자열이나 binary 을 데이터로 읽기
 
         파일 처리 결과는 객체 내부에 성공 목록과 실패 목록으로 저장됨
 
         Args:
-            str_or_bytes (str, bytes): text모드 string 또는 binary모드 bytes
+            str_or_bytes (str, bytes): text 모드 string 또는 binary 모드 bytes
 
         """
         pass
 
     def to_pandas(self) -> pd.DataFrame:
-        """파일 처리 결과를 pd.DataFrame 형태로 받음.
+        """파일 처리 결과를 모두 반영하여 pd.DataFrame 형태로 출력함
 
         파일 포맷에 따라서 내부 구현이 달라짐
 
@@ -86,42 +93,17 @@ class FileformatBase:
         """
         pass
 
-    def dumps(self, mode: Literal['text', 'binary'] = 'text', data=None ) -> Union[str, bytes]:
+    def dumps(self, mode: Literal['text', 'binary'] = 'text', data=None) -> Union[str, bytes]:
         """데이터를 문자열 형태로 출력
 
         Args:
             mode (): 출력 모드 'text' 또는 'binary' 선택
             data (): 출력할 데이터, 생략되면 self.data 사용
+
         Returns:
             데이터를 text 모드에서는 str, 'binary' 모드에서는 bytes 타입 출력
         """
         pass
-
-    def get_data(self, need_update=True) -> pd.DataFrame:
-        """dataframe data get
-
-        Args:
-            need_update (Bool): need_update (Bool): update processing pass_list and fail_list first? default True
-
-        Returns: data (pd.DataFrame)
-
-        """
-        if need_update:
-            df = self._to_pandas()
-        return df
-
-    def set_data(self, data: pd.DataFrame, need_update=True) -> None:
-        """dataframe data set
-
-        Args:
-            data (): set 할 dataframe
-            need_update (Bool): update processing pass_list and fail_list first? default True
-        """
-        if need_update:
-            self.to_pandas()
-        if isinstance(data, pd.DataFrame):
-            self.data_df = data
-
 
     """
     

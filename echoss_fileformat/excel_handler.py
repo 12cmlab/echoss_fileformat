@@ -15,14 +15,14 @@ class ExcelHandler(CsvHandler):
     학습데이터로 Excel 파일은 전체 읽기를 기본으로 해서
     해더와 사용 컬럼 지정을 제공한다
     """
-    def __init__(self, encoding='utf-8', error_log='error.log'):
+    def __init__(self, processing_type='array', encoding='utf-8', error_log='error.log'):
         """Excel 파일 핸들러 초기화
 
         Args:
             encoding: 문서 인코딩 'utf-8' 기본값
             error_log: 에러 발생 시에 저장되는 파일 'error.log' 기본값
         """
-        super().__init__(encoding=encoding, error_log=error_log)
+        super().__init__(processing_type=processing_type, encoding=encoding, error_log=error_log)
 
     def load(self, file_or_filename: Union[io.TextIOWrapper, io.BytesIO, io.BufferedIOBase, str],
              sheet_name=0, header=0, skiprows=0, nrows=None, usecols=None ):
@@ -99,12 +99,16 @@ class ExcelHandler(CsvHandler):
             else:
                 df = data
 
-            df.to_excel(
-                file_or_filename,
-                sheet_name=sheet_name,
-                index=False,
-                engine='openpyxl'
-            )
+            # df.to_excel(
+            #     file_or_filename,
+            #     sheet_name=sheet_name,
+            #     index=False,
+            #     engine='openpyxl'
+            # )
+
+            # write to Excel file
+            with pd.ExcelWriter(file_or_filename) as writer:
+                df.to_excel(writer, sheet_name=sheet_name, index=False)
         except Exception as e:
             logger.error(f"'{str(file_or_filename)}' dump raise {e}")
 
