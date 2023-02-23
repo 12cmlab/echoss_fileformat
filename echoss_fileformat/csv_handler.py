@@ -1,7 +1,7 @@
 import io
 import logging
 import pandas as pd
-from typing import Union, Dict, Literal
+from typing import Union, Literal, Optional
 
 from .fileformat_base import FileformatBase
 
@@ -19,10 +19,15 @@ class CsvHandler(FileformatBase):
                  delimiter=',', quotechar='"', escapechar='\\'):
         """CSV 파일 핸들러 초기화 메쏘드
 
-        processing_type='array' 만 사용. 다른 방식은 없으므로 무시.
+        학습데이터는 processing_type='array' 사용. 누적 후 to_pandas()로 최종 dataframe 획득
+
+        'object' 는 전체를 읽어서 바로 dataframe 으로 리턴하는 방식
 
         Args:
-            delimiter: 컬럼 구분자
+            processing_type (): Literal['array', 'object']
+            encoding: 파일 인코팅
+            error_log: 파일 처리 실패 시 에러 저장 파일명
+            delimiter: 컬럼 구분자 (실제 구현 함수에서는 sep 으로 변경. 추후 변경 가능성)
             quotechar: 인용 문자
             escapechar: 예외처리 문자
         """
@@ -32,10 +37,10 @@ class CsvHandler(FileformatBase):
         self.escapechar = escapechar
 
     def load(self, file_or_filename: Union[io.TextIOWrapper, io.BytesIO, io.BufferedIOBase, str],
-             header=0, skiprows=0, nrows=None, usecols=None) -> pd.DataFrame:
+             header=0, skiprows=0, nrows=None, usecols=None) -> Optional[pd.DataFrame]:
         """CSV 파일 읽기
 
-            모든 load() 메쏘드에 결과 dataframe 을 리턴한다
+            CSV 파일을 읽고 dataframe 으로 처리함
 
         Args:
             file_or_filename (file-like object): file object or file name
@@ -164,7 +169,7 @@ class CsvHandler(FileformatBase):
             index=False
         )
 
-    def dumps(self, mode: Literal['text','binary'] = 'text', quoting=0, data: pd.DataFrame = None) -> Union[str, bytes]:
+    def dumps(self, mode: Literal['text', 'binary'] = 'text', quoting=0, data: pd.DataFrame = None) -> Union[str, bytes]:
         """데이터를 CSV 파일로 쓰기
 
         파일은 text, binary 모드 파일객체이거나 파일명 문자열
@@ -175,10 +180,10 @@ class CsvHandler(FileformatBase):
         Returns:
             없음
         """
-        if 'text' == mode:
-            file_obj = io.StringIO()
-        elif 'binary' == mode:
+        if 'binary' == mode:
             file_obj = io.BytesIO()
+        else:  # 'text'
+            file_obj = io.StringIO()
 
         try:
             self.dump(file_obj, quoting=quoting, data=data)
@@ -199,18 +204,17 @@ class CsvHandler(FileformatBase):
             fp : file obj if exist, or None
             mode : Union['binary', 'text', 'str']
         """
-        fp = None
         if isinstance(file_or_filename, io.TextIOWrapper):
-            fp = file_or_filename
             mode = 'text'
         # AWS s3 use io.BytesIO
         elif isinstance(file_or_filename, io.BytesIO):
-            fp = file_or_filename
             mode = 'binary'
         # open 'rb' use io.BufferedIOBase (BufferedReader or BufferedWriter)
-        elif isinstance(file_or_filename, io.BufferedIOBase):
-            fp = file_or_filename
-            # fp = io.BytesIO(file_or_filename.read())
+        elif isinstance(file_or_filename, (io.BufferedReader, io.BufferedWriter)):
+            if isinstance(file_or_filename, io.BufferedReader):
+                fp: io.BufferedReader = file_or_filename
+            else:
+                fp: io.BufferedWriter = file_or_filename
             if 'b' in fp.mode:
                 mode = 'binary'
             else:
@@ -221,5 +225,3 @@ class CsvHandler(FileformatBase):
         else:
             raise TypeError(f"'{self.processing_type}' {file_or_filename} is not file-like obj")
         return mode
-
-

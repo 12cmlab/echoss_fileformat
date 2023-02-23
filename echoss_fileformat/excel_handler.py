@@ -1,8 +1,8 @@
 import io
 import logging
 import pandas as pd
-import openpyxl
-from typing import Union, Dict, Literal
+import openpyxl   # to_excel() 에서 사용하므로 설치는 되어야함
+from typing import Union, Literal
 
 from .csv_handler import CsvHandler
 
@@ -36,9 +36,9 @@ class ExcelHandler(CsvHandler):
             nrows (int): skiprows 부터 N개의 데이터 row 만 읽을 경우 숮자 지정
             usecols (Union[int, list]): 전체 컬럼 사용시 None, 컬럼 번호나 이름의 리스트 [0, 1, 2] or ['foo', 'bar', 'baz']
         """
-        try:
-            mode = self._check_file_or_filename(file_or_filename)
+        mode = self._check_file_or_filename(file_or_filename)
 
+        try:
             df = pd.read_excel(
                 file_or_filename,
                 sheet_name=sheet_name,
@@ -84,7 +84,7 @@ class ExcelHandler(CsvHandler):
     # def to_pandas() 는 data_list 에 dataframe 을 저장하는 방식이 CsvHandler 와 동일하여 따로 정의하지 않음
     #
 
-    def dump(self, file_or_filename, sheet_name='Sheet1', data: pd.DataFrame = None):
+    def dump(self, file_or_filename, sheet_name='Sheet1', data: pd.DataFrame = None) -> None:
         """데이터를 Excel 파일로 쓰기
 
         파일은 text, binary 모드 파일객체이거나 파일명 문자열
@@ -99,6 +99,8 @@ class ExcelHandler(CsvHandler):
             else:
                 df = data
 
+            self._check_file_or_filename(file_or_filename)
+
             # df.to_excel(
             #     file_or_filename,
             #     sheet_name=sheet_name,
@@ -112,12 +114,14 @@ class ExcelHandler(CsvHandler):
         except Exception as e:
             logger.error(f"'{str(file_or_filename)}' dump raise {e}")
 
-    def dumps(self, mode: Literal['text', 'binary'] = 'text', data: pd.DataFrame = None):
+    def dumps(self, mode: Literal['text', 'binary'] = 'text', sheet_name='Sheet1',
+              data: pd.DataFrame = None) -> Union[str, bytes]:
         """데이터를 CSV 파일로 쓰기
 
         파일은 text, binary 모드 파일객체이거나 파일명 문자열
         Args:
             mode (str): 출력 모드 'text' 또는 'binary' 선택. 기본 'text' 는 문자열 출력
+            sheet_name: 쉬트 이름.
             data: 내장 dataframe 대신 사용할 data. 기존 유틸리티의 호환성을 위해서 남김
         """
         if 'text' == mode:
@@ -126,7 +130,7 @@ class ExcelHandler(CsvHandler):
             file_obj = io.BytesIO()
 
         try:
-            self.dump(file_obj, data=data)
+            self.dump(file_obj, sheet_name=sheet_name, data=data)
         except Exception as e:
             logger.error(f"mode='{mode}' dumps raise {e}")
 
