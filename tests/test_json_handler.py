@@ -34,7 +34,7 @@ class MyTestCase(unittest.TestCase):
 
     def test_load_complex_by_json_type(self):
         json_types = ['object', 'array', 'multiline']
-        expect_passes = [1, 0, 0]
+        expect_passes = [0, 0, 0]
         expect_fails = [0, 1, 1942]
 
         for json_type, expect_pass, expect_fail in zip(json_types, expect_passes, expect_fails):
@@ -53,7 +53,7 @@ class MyTestCase(unittest.TestCase):
 
     def test_load_complex_by_data_key(self):
         json_types = ['object', 'array', 'multiline']
-        expect_passes = [1, 102, 0]
+        expect_passes = [0, 1, 0]
         expect_fails = [0, 0, 1942]
 
         for json_type, expect_pass, expect_fail in zip(json_types, expect_passes, expect_fails):

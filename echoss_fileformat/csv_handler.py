@@ -15,33 +15,37 @@ class CsvHandler(FileformatBase):
     해더와 사용 컬럼 지정을 제공한다
     """
 
-    def __init__(self, delimiter=',', quotechar='"', escapechar='\\', encoding='utf-8', error_log='error.log'):
+    def __init__(self, processing_type='array', encoding='utf-8', error_log='error.log',
+                 delimiter=',', quotechar='"', escapechar='\\'):
         """CSV 파일 핸들러 초기화 메쏘드
 
+        processing_type='array' 만 사용. 다른 방식은 없으므로 무시.
+
         Args:
-            encoding: 파일 인코딩.
             delimiter: 컬럼 구분자
             quotechar: 인용 문자
             escapechar: 예외처리 문자
         """
-        super().__init__(encoding=encoding, error_log=error_log)
-        self.encoding = encoding
+        super().__init__(processing_type=processing_type, encoding=encoding, error_log=error_log)
         self.delimiter = delimiter
         self.quotechar = quotechar
         self.escapechar = escapechar
 
     def load(self, file_or_filename: Union[io.TextIOWrapper, io.BytesIO, io.BufferedIOBase, str],
-             header=0, skiprows=0, nrows=None, usecols=None):
+             header=0, skiprows=0, nrows=None, usecols=None) -> pd.DataFrame:
         """CSV 파일 읽기
+
+            모든 load() 메쏘드에 결과 dataframe 을 리턴한다
 
         Args:
             file_or_filename (file-like object): file object or file name
-            header (Union[int, list]): 헤더로 사용될 1부터 시작되는 row index, 멀티헤더인 경우에는 [1, 2, 3] 형태로 사용
-            skiprows (int) : 데이터가 시작되는 row index 지정
-            nrows (int): skiprows 부터 N개의 데이터 row 만 읽을 경우 숮자 지정
+            header (Union[int, list]): 헤더로 사용될 row index, 멀티헤더인 경우에는 [1, 2, 3] 형태로 사용
+            skiprows (int) : 데이터를 읽기 위해서 스킵할 row 숫자 지정. (header 로 부터 스킵 숫자)
+            nrows (int): skiprows 부터 N개의 데이터 row 건수만 읽을 경우 지정
             usecols (Union[int, list]): 전체 컬럼 사용시 None, 컬럼 번호나 이름의 리스트 [0, 1, 2] or ['foo', 'bar', 'baz']
         """
         try:
+            # file_or_filename 객체가 지원되는 file-like object 또는 filename string 인지 검사
             self._check_file_or_filename(file_or_filename)
 
             df = pd.read_csv(
@@ -59,11 +63,13 @@ class CsvHandler(FileformatBase):
             )
 
             self.pass_list.append(df)
+            return self.to_pandas()
         except Exception as e:
             self.fail_list.append(str(file_or_filename))
             logger.error(f"{file_or_filename} load raise {e}")
 
-    def loads(self, str_or_bytes: Union[str, bytes], header=0, skiprows=0, nrows=None, usecols=None):
+    def loads(self, str_or_bytes: Union[str, bytes],
+              header=0, skiprows=0, nrows=None, usecols=None) -> pd.DataFrame:
         """문자열이나 bytes 에서 CSV 읽기
 
         Args:
@@ -79,8 +85,9 @@ class CsvHandler(FileformatBase):
                 file_obj = io.StringIO(str_or_bytes)
             elif isinstance(str_or_bytes, bytes):
                 file_obj = io.BytesIO(str_or_bytes)
+
             if file_obj:
-                self.load(file_obj, header=header, skiprows=skiprows, nrows=nrows, usecols=usecols)
+                return self.load(file_obj, header=header, skiprows=skiprows, nrows=nrows, usecols=usecols)
         except Exception as e:
             self.fail_list.append(str_or_bytes)
             logger.error(f"'{str_or_bytes}' loads raise {e}")
@@ -212,7 +219,7 @@ class CsvHandler(FileformatBase):
             mode = 'str'
         # elif isinstance(file_or_filename, Path)  # 향후 pathlib.Path 객체 사용 검토
         else:
-            raise TypeError(f"{file_or_filename} is not file-like obj")
+            raise TypeError(f"'{self.processing_type}' {file_or_filename} is not file-like obj")
         return mode
 
 
