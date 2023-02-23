@@ -105,7 +105,7 @@ class XmlHandler(FileformatBase):
         """
         if len(self.pass_list) > 0:
             try:
-                append_df = pd.json_normalize(self.pass_list)
+                append_df = pd.DataFrame(self.pass_list)
                 merge_df = pd.concat([self.data_df, append_df], ignore_index=True)
                 self.data_df = merge_df
             except Exception as e:
