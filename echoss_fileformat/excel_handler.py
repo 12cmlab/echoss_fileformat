@@ -25,15 +25,17 @@ class ExcelHandler(CsvHandler):
         super().__init__(processing_type=processing_type, encoding=encoding, error_log=error_log)
 
     def load(self, file_or_filename: Union[io.TextIOWrapper, io.BytesIO, io.BufferedIOBase, str],
-             sheet_name=0, header=0, skiprows=0, nrows=None, usecols=None ):
+             sheet_name=0, skiprows=0, header=0, nrows=None, usecols=None ):
         """Excel 파일 읽기
 
         Args:
             file_or_filename (file-like object): file object or file name
             sheet_name: 1개의 sheet 만 지정. 0으로 시작하는 일련 번호 또는 쉬트 이름. None 이면 첫 쉬트 사용
+            skiprows (Union[int, list]) : 데이터가 시작되는 row index 또는 배열 지정.
+                header 보다 먼저 적용되고, header의 인덱스는 이 처리 결과의 인덱스
+
             header (Union[int, list]): 헤더로 사용될 1부터 시작되는 row index, 멀티헤더인 경우에는 [1, 2, 3] 형태로 사용
-            skiprows (int) : 데이터가 시작되는 row index 지정
-            nrows (int): skiprows 부터 N개의 데이터 row 만 읽을 경우 숮자 지정
+            nrows (int): skiprows 부터 N개의 데이터 row 만 읽을 경우 숫자 지정
             usecols (Union[int, list]): 전체 컬럼 사용시 None, 컬럼 번호나 이름의 리스트 [0, 1, 2] or ['foo', 'bar', 'baz']
         """
         mode = self._check_file_or_filename(file_or_filename)
@@ -50,6 +52,9 @@ class ExcelHandler(CsvHandler):
                 engine='openpyxl'
             )
 
+            # delete index column
+            df = df.reset_index(drop=True)
+
             self.pass_list.append(df)
         except Exception as e:
             self.fail_list.append(str(file_or_filename))
@@ -63,7 +68,9 @@ class ExcelHandler(CsvHandler):
             str_or_bytes (str, bytes): text 모드 string 또는 binary 모드 bytes
             sheet_name: 1개의 sheet 만 지정. 0으로 시작하는 일련 번호 또는 쉬트 이름. None 이면 첫 쉬트 사용
             header (Union[int, list]): 헤더로 사용될 1부터 시작되는 row index, 멀티헤더인 경우에는 [1, 2, 3] 형태로 사용
-            skiprows (int) : 데이터가 시작되는 row index 지정
+            skiprows (Union[int, list]) : 데이터가 시작되는 row index 또는 배열 지정.
+                header 보다 먼저 적용되고, header의 인덱스는 이 처리 결과의 인덱스
+
             nrows (int): skiprows 부터 N개의 데이터 row 만 읽을 경우 숮자 지정
             usecols (Union[int, list]): 전체 컬럼 사용시 None, 컬럼 번호나 이름의 리스트 [0, 1, 2] or ['foo', 'bar', 'baz']
         """
@@ -75,7 +82,7 @@ class ExcelHandler(CsvHandler):
                 file_obj = io.BytesIO(str_or_bytes)
             if file_obj:
                 self.load(file_obj,
-                          sheet_name=sheet_name, header=header, skiprows=skiprows, nrows=nrows, usecols=usecols)
+                          sheet_name=sheet_name, skiprows=skiprows, header=header, nrows=nrows, usecols=usecols)
         except Exception as e:
             self.fail_list.append(str_or_bytes)
             logger.error(f"'{str_or_bytes}' loads raise {e}")
@@ -105,12 +112,13 @@ class ExcelHandler(CsvHandler):
             #     file_or_filename,
             #     sheet_name=sheet_name,
             #     index=False,
-            #     engine='openpyxl'
+            #     engine = 'xlsxwriter'
             # )
 
             # write to Excel file
             with pd.ExcelWriter(file_or_filename) as writer:
-                df.to_excel(writer, sheet_name=sheet_name, index=False)
+                df.to_excel(writer, sheet_name=sheet_name, index=True)
+                # df.to_excel(writer, sheet_name=sheet_name, index=False)
         except Exception as e:
             logger.error(f"'{str(file_or_filename)}' dump raise {e}")
 
