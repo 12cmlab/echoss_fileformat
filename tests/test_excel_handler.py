@@ -23,8 +23,8 @@ def table_to_string(df: pd.DataFrame):
     Returns:
 
     """
-    return df.to_string(index=False, max_cols=10, max_rows=5, justify='left', show_dimensions=True,
-                        col_space=8, max_colwidth=24)
+    return df.to_string(index=True, index_names=True, max_cols=20, max_rows=5, justify='left', show_dimensions=True,
+                        col_space=16, max_colwidth=24)
 
 
 class MyTestCase(unittest.TestCase):
@@ -60,7 +60,7 @@ class MyTestCase(unittest.TestCase):
             fail_size = len(handler.fail_list)
             df = handler.to_pandas()
             if df is not None:
-                logger.info(table_to_string)
+                logger.info('\n'+table_to_string)
                 load_columns = list(df.columns)
                 load_len = len(df)
                 logger.info(f"expect dataframe len={expect_len} and get {len(df)}")
@@ -128,6 +128,36 @@ class MyTestCase(unittest.TestCase):
             logger.info(f"\t load columns {load_columns}, dump columns len={dump_columns}")
             self.assertListEqual(load_columns, dump_columns)
 
+    def test_multi_header_load_skiprows(self):
+        expect_shape = (50, 8)
+        test_skiprows = [0, 3, [0, 1, 2], [0, 1, 2]]
+        test_header = [[3, 4], [0, 1], [3, 4], [0, 1]]
+
+        load_filename = 'test_data/multiheader_table.xlsx'
+        try:
+            for skiprows, header in zip(test_skiprows, test_header):
+                handler = ExcelHandler()
+                logger.info(f"try load sheet_name='50주차', skiprows={skiprows}, header={header}, nrows=50")
+                handler.load(load_filename, sheet_name='50주차', skiprows=skiprows, header=header, nrows=50)
+                df = handler.to_pandas()
+                if df is not None:
+
+                    load_columns = list(df.columns)
+                    load_shape = df.shape
+
+                    logger.info(f"load df columns={load_columns}")
+                    logger.info('\n' + table_to_string(df))
+                    logger.info(f"expect dataframe shape={expect_shape} and get {load_shape}")
+
+                    # self.assertEqual(expect_shape, load_shape)
+                    pass
+                else:
+                    logger.error('empty dataframe')
+
+        except Exception as e:
+            logger.error(f"\t File load fail by {e}")
+            # self.assertTrue(True, f"\t File load fail by {e}")
+
     def test_multi_header_3(self):
         expect_shape = (100, 8)
 
@@ -135,26 +165,33 @@ class MyTestCase(unittest.TestCase):
         dump_filename = 'test_data/multiheader_table_to_delete.xlsx'
         try:
             handler = ExcelHandler()
-            handler.load(load_filename, sheet_name='50주차', skiprows=0, header=[3, 4], nrows=100)
+            handler.load(load_filename, sheet_name='50주차', skiprows=3, header=[3, 4], nrows=100)
 
             df = handler.to_pandas()
             if df is not None:
                 logger.info(table_to_string(df))
                 load_columns = list(df.columns)
+                for c in load_columns:
+                    print(f"'[{c}]'")
+                print('\n')
                 load_shape = df.shape
                 logger.info(f"expect dataframe shape={expect_shape} and get {load_shape}")
                 self.assertEqual(expect_shape, load_shape)
             else:
                 logger.error('empty dataframe')
 
-            handler.dump(dump_filename)
+            handler.dump(dump_filename, sheet_name="학습데이터")
             exist = os.path.exists(dump_filename)
 
             if exist:
                 check_handler = ExcelHandler()
-                check_handler.load(dump_filename)
+                # sheet_name='50주차', skiprows=1, , nrows=100
+                check_handler.load(dump_filename, header=[0, 1], skiprows=1, nrows=100 ),
                 check_df = check_handler.to_pandas()
                 dump_columns = list(check_df.columns)
+                for c in dump_columns:
+                    print(f"'[{c}]'")
+                print('\n')
                 dump_shape = check_df.shape
             if exist and 'to_delete' in dump_filename:
                 os.remove(dump_filename)
@@ -167,6 +204,7 @@ class MyTestCase(unittest.TestCase):
             self.assertEqual(load_shape,  dump_shape)
             logger.info(f"\t load columns {load_columns}, dump columns len={dump_columns}")
             self.assertListEqual(load_columns, dump_columns)
+
 
 if __name__ == '__main__':
     unittest.main(verbosity=2)
