@@ -1,7 +1,8 @@
 import io
 import logging
 import pandas as pd
-import openpyxl   # to_excel() 에서 사용하므로 설치는 되어야함
+import xlsxwriter
+# import openpyxl   # to_excel() 에서 사용하므로 설치는 되어야함
 from typing import Union, Literal
 
 from .csv_handler import CsvHandler
@@ -23,6 +24,9 @@ class ExcelHandler(CsvHandler):
             error_log: 에러 발생 시에 저장되는 파일 'error.log' 기본값
         """
         super().__init__(processing_type=processing_type, encoding=encoding, error_log=error_log)
+        # self.engine = 'openpyxl'
+        self.read_engine = 'openpyxl'
+        self.write_engine = 'xlsxwriter'
 
     def load(self, file_or_filename: Union[io.TextIOWrapper, io.BytesIO, io.BufferedIOBase, str],
              sheet_name=0, skiprows=0, header=0, nrows=None, usecols=None ):
@@ -49,7 +53,7 @@ class ExcelHandler(CsvHandler):
                 nrows=nrows,
                 usecols=usecols,
                 parse_dates=True,
-                engine='openpyxl'
+                engine=self.read_engine
             )
 
             # delete index column
@@ -112,13 +116,13 @@ class ExcelHandler(CsvHandler):
             #     file_or_filename,
             #     sheet_name=sheet_name,
             #     index=False,
-            #     engine = 'xlsxwriter'
+            #     engine=self.engine
             # )
 
             # write to Excel file
-            with pd.ExcelWriter(file_or_filename) as writer:
-                df.to_excel(writer, sheet_name=sheet_name, index=True)
-                # df.to_excel(writer, sheet_name=sheet_name, index=False)
+            with pd.ExcelWriter(file_or_filename, engine=self.write_engine) as writer:
+                df.to_excel(writer, sheet_name=sheet_name, index=False)
+                # df.to_excel(writer, sheet_name=sheet_name, index=True)
         except Exception as e:
             logger.error(f"'{str(file_or_filename)}' dump raise {e}")
 
