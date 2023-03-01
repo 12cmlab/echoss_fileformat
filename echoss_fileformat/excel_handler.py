@@ -3,7 +3,7 @@ import logging
 import pandas as pd
 import xlsxwriter
 # import openpyxl   # to_excel() 에서 사용하므로 설치는 되어야함
-from typing import Union, Literal
+from typing import Literal, Optional, Union
 
 from .csv_handler import CsvHandler
 
@@ -16,10 +16,13 @@ class ExcelHandler(CsvHandler):
     학습데이터로 Excel 파일은 전체 읽기를 기본으로 해서
     해더와 사용 컬럼 지정을 제공한다
     """
-    def __init__(self, processing_type='array', encoding='utf-8', error_log='error.log'):
+    def __init__(self, processing_type: Literal['array', 'object'] = 'array', encoding='utf-8', error_log='error.log'):
         """Excel 파일 핸들러 초기화
 
         Args:
+            processing_type: multi-header dump 시에 index=False 가 지원되지 않아서,
+                'array' 에서는 load 시 index로 추정되는 컬럼 별도 예외 drop 처리
+                'object' 는 처리 없이 그대로 읽어들임
             encoding: 문서 인코딩 'utf-8' 기본값
             error_log: 에러 발생 시에 저장되는 파일 'error.log' 기본값
         """
@@ -29,7 +32,7 @@ class ExcelHandler(CsvHandler):
         self.write_engine = 'xlsxwriter'
 
     def load(self, file_or_filename: Union[io.TextIOWrapper, io.BytesIO, io.BufferedIOBase, str],
-             sheet_name=0, skiprows=0, header=0, nrows=None, usecols=None ):
+             sheet_name=0, skiprows=0, header=0, nrows=None, usecols=None) -> Optional[pd.DataFrame]:
         """Excel 파일 읽기
 
         Args:
@@ -56,13 +59,20 @@ class ExcelHandler(CsvHandler):
                 engine=self.read_engine
             )
 
-            # delete index column
-            df = df.reset_index(drop=True)
+            if self.processing_type == CsvHandler.TYPE_ARRAY:
+                if isinstance(df.columns, pd.MultiIndex):
+                    df = df.drop([col for col in df.columns if 'Unnamed' in str(col)], axis=1)
 
-            self.pass_list.append(df)
+                    # 모든 column 값이 NaN 인 row는 제거
+                    df.dropna(how='all', inplace=True)
+                self.pass_list.append(df)
+            elif self.processing_type == CsvHandler.TYPE_OBJECT:
+                return df
         except Exception as e:
             self.fail_list.append(str(file_or_filename))
             logger.error(f"{file_or_filename} '{mode}' load raise {e}")
+            if self.processing_type == CsvHandler.TYPE_OBJECT:
+                return None
 
     def loads(self, str_or_bytes: Union[str, bytes],
               sheet_name=0, header=0, skiprows=0, nrows=None, usecols=None):
@@ -85,11 +95,15 @@ class ExcelHandler(CsvHandler):
             elif isinstance(str_or_bytes, bytes):
                 file_obj = io.BytesIO(str_or_bytes)
             if file_obj:
-                self.load(file_obj,
-                          sheet_name=sheet_name, skiprows=skiprows, header=header, nrows=nrows, usecols=usecols)
+                df = self.load(file_obj, sheet_name=sheet_name,
+                          skiprows=skiprows, header=header, nrows=nrows, usecols=usecols)
+                if self.processing_type == CsvHandler.TYPE_OBJECT:
+                    return df
         except Exception as e:
             self.fail_list.append(str_or_bytes)
             logger.error(f"'{str_or_bytes}' loads raise {e}")
+            if self.processing_type == CsvHandler.TYPE_OBJECT:
+                return None
 
     #
     # def to_pandas() 는 data_list 에 dataframe 을 저장하는 방식이 CsvHandler 와 동일하여 따로 정의하지 않음
@@ -112,6 +126,16 @@ class ExcelHandler(CsvHandler):
 
             self._check_file_or_filename(file_or_filename)
 
+            # index 처리 방법을 먼저 정함
+            use_index = False
+            if isinstance(df.columns, pd.MultiIndex):
+                use_index = True
+            elif self.processing_type == CsvHandler.TYPE_OBJECT:
+                use_index = True
+            elif not isinstance(df.index, pd.core.indexes.range.RangeIndex):
+                use_index = True
+
+            # # multi-header 문제떄문에 ExcelWriter 버전으로 대체. 효과는 없었엄. index=True 로 dump하고 후처리 방식으로 변경
             # df.to_excel(
             #     file_or_filename,
             #     sheet_name=sheet_name,
@@ -121,8 +145,8 @@ class ExcelHandler(CsvHandler):
 
             # write to Excel file
             with pd.ExcelWriter(file_or_filename, engine=self.write_engine) as writer:
-                df.to_excel(writer, sheet_name=sheet_name, index=False)
-                # df.to_excel(writer, sheet_name=sheet_name, index=True)
+                df.to_excel(writer, sheet_name=sheet_name, index=use_index)
+
         except Exception as e:
             logger.error(f"'{str(file_or_filename)}' dump raise {e}")
 

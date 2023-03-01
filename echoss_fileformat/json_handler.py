@@ -33,7 +33,7 @@ class JsonHandler(FileformatBase):
         super().__init__(processing_type = processing_type, encoding=encoding, error_log=error_log)
 
     def load(self, file_or_filename: Union[io.TextIOWrapper, io.BytesIO, str],
-             data_key: str = None) -> Optional[Dict]:
+             data_key: str = None) -> Optional[dict]:
         """파일 객체나 파일명에서 JSON 데이터 읽기
 
         Args:
