@@ -7,57 +7,15 @@ import pandas as pd
 import xlsxwriter
 
 from echoss_fileformat.excel_handler import ExcelHandler
-
-
-# Define custom formatter with different colors for each log level
-class ColoredFormatter(logging.Formatter):
-    grey = "\x1b[38;21m"
-    yellow = "\x1b[33;21m"
-    red = "\x1b[31;21m"
-    bold_red = "\x1b[31;1m"
-    reset = "\x1b[0m"
-
-    FORMATS = {
-        logging.DEBUG: grey + "%(asctime)s %(name)s %(levelname)s - %(message)s" + reset,
-        logging.INFO: yellow + "%(asctime)s %(name)s %(levelname)s - %(message)s" + reset,
-        logging.WARNING: yellow + "%(asctime)s %(name)s %(levelname)s - %(message)s" + reset,
-        logging.ERROR: red + "%(asctime)s %(name)s %(levelname)s - %(message)s" + reset,
-        logging.CRITICAL: bold_red + "%(asctime)s %(name)s %(levelname)s - %(message)s" + reset
-    }
-
-    def format(self, record):
-        log_format = self.FORMATS.get(record.levelno)
-        formatter = logging.Formatter(log_format)
-        return formatter.format(record)
+from dataframe_util import print_dataframe, print_table, print_taburate
 
 
 # configure the logger
-# LOG_FORMAT = "%(asctime)s %(name)s %(levelname)s - %(message)s"
-# logging.basicConfig(level=logging.INFO, format=LOG_FORMAT)
-
+LOG_FORMAT = "%(asctime)s %(name)s %(levelname)s - %(message)s"
+logging.basicConfig(level=logging.INFO, format=LOG_FORMAT)
 logger = logging.getLogger(__name__)
-logger.setLevel(logging.INFO)
-log_handler = logging.StreamHandler(sys.stdout)
-log_handler.setFormatter(ColoredFormatter())
-logger.addHandler(log_handler)
 
-
-verbose = False
-
-
-def table_to_string(df: pd.DataFrame):
-    """
-
-    Args:
-        df:
-
-    Returns:
-
-    """
-    if not verbose:
-        return ""
-    return df.to_string(index=True, index_names=True, max_cols=20, max_rows=5, justify='left', show_dimensions=True,
-                        col_space=16, max_colwidth=24)
+verbose = True
 
 
 class MyTestCase(unittest.TestCase):
@@ -93,13 +51,14 @@ class MyTestCase(unittest.TestCase):
             fail_size = len(handler.fail_list)
             df = handler.to_pandas()
             if df is not None:
-                logger.info('\n'+table_to_string(df))
+                if verbose:
+                    print_dataframe(df, logger.info)
                 load_columns = list(df.columns)
                 load_len = len(df)
-                logger.info(f"expect dataframe len={expect_len} and get {len(df)}")
+                logger.info(f"\t expect dataframe len={expect_len} and get {len(df)}")
                 self.assertEqual(load_len, expect_len)
             else:
-                logger.info('empty dataframe')
+                logger.info('\t empty dataframe')
 
             handler.dump(dump_filename)
             exist = os.path.exists(dump_filename)
@@ -132,7 +91,8 @@ class MyTestCase(unittest.TestCase):
             handler.load(load_filename, sheet_name='Youtube생산성', skiprows=1, header=0, nrows=20, usecols='B:D')
             df = handler.to_pandas()
             if df is not None:
-                logger.info('\n'+table_to_string(df))
+                if verbose:
+                    print_taburate(df, print)
                 load_columns = list(df.columns)
                 load_shape = df.shape
                 logger.info(f"expect dataframe shape={expect_shape} and get {load_shape}")
@@ -156,9 +116,9 @@ class MyTestCase(unittest.TestCase):
             logger.error(f"\t File load fail by {e}")
             # self.assertTrue(True, f"\t File load fail by {e}")
         else:
-            logger.info(f"\t load df {load_shape=}, dump df {dump_shape}")
+            logger.info(f"\t assert load df {load_shape=}, dump df {dump_shape=} is same?")
             self.assertEqual(load_shape,  dump_shape)
-            logger.info(f"\t load columns {load_columns}, dump columns len={dump_columns}")
+            logger.info(f"\t assert load columns {load_columns}, dump columns {dump_columns} is same?")
             self.assertListEqual(load_columns, dump_columns)
 
     def test_multi_header_load_skiprows(self):
@@ -171,7 +131,7 @@ class MyTestCase(unittest.TestCase):
         try:
             for skiprows, header, succeed in zip(test_skiprows, test_header, expect_success):
                 handler = ExcelHandler()
-                logger.info(f"try load sheet_name='50주차', skiprows={skiprows}, header={header}, nrows=50")
+                logger.info(f"\ttry load sheet_name='50주차', skiprows={skiprows}, header={header}, nrows=50")
                 handler.load(load_filename, sheet_name='50주차', skiprows=skiprows, header=header, nrows=50)
                 df = handler.to_pandas()
                 if df is not None:
@@ -181,13 +141,13 @@ class MyTestCase(unittest.TestCase):
 
                     logger.debug(f"load df columns={load_columns}")
                     if verbose:
-                        logger.debug('\n' + table_to_string(df))
+                        print_table(df, logger.info)
                     logger.debug(f"expect dataframe shape={expect_shape} and get {load_shape}")
 
-                    if succeed:
-                        self.assertTrue(expect_shape == load_shape and expect_columns == load_columns)
-                    else:
-                        self.assertTrue(not (expect_shape == load_shape and expect_columns == load_columns))
+                    is_same_df = expect_shape == load_shape and expect_columns == load_columns
+                    logger.info(f"\t\tassert is_same_df={succeed} and get {is_same_df}")
+
+                    self.assertEqual(succeed, is_same_df)
                     pass
                 else:
                     logger.error('empty dataframe')
@@ -203,12 +163,12 @@ class MyTestCase(unittest.TestCase):
         dump_filename = 'test_data/multiheader_table_to_delete.xlsx'
         try:
             handler = ExcelHandler()
-            handler.load(load_filename, sheet_name='50주차', skiprows=3, header=[0, 1], nrows=100)
+            handler.load(load_filename, sheet_name='50주차', skiprows=0, header=[3, 4], nrows=100)
 
             df = handler.to_pandas()
             if df is not None:
                 if verbose:
-                    logger.info('\n'+table_to_string(df))
+                    print_table(df, print)
                 load_columns = list(df.columns)
 
                 load_shape = df.shape
@@ -223,12 +183,11 @@ class MyTestCase(unittest.TestCase):
             if exist:
                 check_handler = ExcelHandler()
                 # sheet_name='50주차', skiprows=1, , nrows=100
-                check_handler.load(dump_filename, skiprows=0, header=[0, 1], nrows=100 ),
+                # 멀티 헤더 문제 때문에 빈칸이 하나더 추가되어 nrows 를 설정하면 +1을 해야함
+                # check_handler.load(dump_filename, skiprows=0, header=[0, 1], nrows=101)
+                check_handler.load(dump_filename, skiprows=0, header=[0, 1])
                 check_df = check_handler.to_pandas()
                 dump_columns = list(check_df.columns)
-                for c in dump_columns:
-                    print(f"'[{c}]'")
-                print('\n')
                 dump_shape = check_df.shape
             if exist and 'to_delete' in dump_filename:
                 os.remove(dump_filename)
@@ -237,9 +196,9 @@ class MyTestCase(unittest.TestCase):
             logger.error(f"\t File load fail by {e}")
             # self.assertTrue(True, f"\t File load fail by {e}")
         else:
-            logger.info(f"\t load df {load_shape=}, dump df {dump_shape}")
+            logger.info(f"\t assert load df {load_shape=}, {dump_shape=} is equal")
             self.assertEqual(load_shape,  dump_shape)
-            logger.info(f"\t load columns {load_columns}, dump columns len={dump_columns}")
+            logger.info(f"\t assert load {load_columns=}, {dump_columns=} is list equal")
             self.assertListEqual(load_columns, dump_columns)
 
 
