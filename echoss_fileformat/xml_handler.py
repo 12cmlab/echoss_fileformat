@@ -3,7 +3,8 @@ import json
 import logging
 import pandas as pd
 from typing import Dict, Literal, Optional, Union
-import xml.etree.ElementTree as ET
+# import xml.etree.ElementTree as ET
+import lxml.etree as et
 
 from .fileformat_base import FileformatBase
 
@@ -31,12 +32,15 @@ class XmlHandler(FileformatBase):
         """
         super().__init__(processing_type=processing_type, encoding=encoding, error_log=error_log)
 
+        # load 시에 root 기억
+        self.root = None
+
         # root 노드의 tag 는 필수 이므로 기본값을 'data' 로 설정. top level 노드의 tag 값도 필수 'row' 기본값
         self.root_tag = 'data'
         self.child_tag = 'row'
 
     def load(self, file_or_filename: Union[io.TextIOWrapper, io.BytesIO, io.BufferedIOBase, str],
-             data_key: str = None, usecols: list = None) -> Optional[ET.Element]:
+             data_key: str = None, usecols: list = None) -> Optional[et.Element]:
         """파일 객체나 파일명에서 JSON 데이터 읽기
 
         Args:
@@ -54,13 +58,30 @@ class XmlHandler(FileformatBase):
             fp, binary_mode, opened = self._get_file_obj(file_or_filename, open_mode)
 
             # 전체 파일을 일고 나머지 처리
-            tree = ET.parse(fp)
+            tree = et.parse(fp)
             root = tree.getroot()
-            # root 의 tag 값을 기억
+
+            # # root 노드의 namespace 처리 -> lxml 에서는 라이브러리가 처리해줌
+            # tag_splits = root.tag.split('}')
+            # if len(tag_splits) >= 1:
+            #     namespace = tag_splits[0][1:]
+            #     # generate namespace mapping
+            #     ns_map = {prefix: uri for prefix, uri in root.nsmap.items() if prefix is not None}
+            #     # Add default namespace to the mapping
+            #     ns_map[''] = namespace
+            #
+            # # Register the namespace mapping
+            # for prefix, uri in ns_map.items():
+            #     ET.register_namespace(prefix, uri)
+            # tree.ET.parse(fp)
+            # root = tree.getroot()
+
+            # root 기억
+            self.root = root
             self.root_tag = root.tag
         except Exception as e:
             self.fail_list.append(str(file_or_filename))
-            logger.error(f"'{file_or_filename}' load raise {e}")
+            logger.error(f"'{file_or_filename}' load raise: {e}")
             raise e
         finally:
             if opened and fp:
@@ -75,21 +96,32 @@ class XmlHandler(FileformatBase):
             if not data_key:
                 data_nodes = root
             else:
-                data_nodes = root.findall(data_key)
+                data_nodes = tree.findall(data_key, namespaces=root.nsmap)
         except Exception as e:
             self.fail_list.append(str(file_or_filename))
-            logger.error(f"'{file_or_filename}' load raise {e}")
+            logger.error(f"'{file_or_filename}' load raise: {e}")
             raise e
 
         for child in data_nodes:
             node_dict = {}
             try:
-                if usecols:
-                    for key in usecols:
-                        node_dict[key] = child.find(key).text
-                else:
-                    for node in child:
-                        node_dict[node.tag] = node.text
+                if isinstance(child, et._ElementTree):
+                    if usecols:
+                        for sub_child in child:
+                            if sub_child.tag in usecols:
+                                node_dict[sub_child.tag] = sub_child.text
+                    else:
+                        for sub_child in child:
+                            node_dict[sub_child.tag] = sub_child.text
+                else:  # isinstance(child, et._Element)
+                    if usecols:
+                        for key in usecols:
+                            node_dict[key] = child.get(key)
+                    else:
+                        for k, v in child.items():
+                            node_dict[k] = v
+                    node_dict['text'] = child.text
+
                 self.pass_list.append(node_dict)
                 self.child_tag = child.tag
             except Exception as e:
@@ -98,7 +130,7 @@ class XmlHandler(FileformatBase):
 
 
     def loads(self, str_or_bytes: Union[str, bytes],
-              data_key: str = None, usecols: list = None) -> Optional[ET.Element]:
+              data_key: str = None, usecols: list = None) -> Optional[et.Element]:
         """문자열이나 bytes 에서 XML 객체 읽기
 
         데이터 처리 결과는 객체 내부에 성공 목록과 실패 목록으로 저장됨
@@ -188,10 +220,10 @@ class XmlHandler(FileformatBase):
             없음
         """
         if self.processing_type == FileformatBase.TYPE_OBJECT:
-            if not data:
+            if data is None:
                 raise TypeError(f"'{self.processing_type=}' dump() must have data parameter")
-            if not (isinstance(data, ET.Element) or (root_tag and child_tag)):
-                raise TypeError(f"'{self.processing_type=}' dump() must have root_tag and child_tag by type(Element)")
+            # elif not (isinstance(data, type(ET._Element)) or (root_tag and child_tag)):
+            #     raise TypeError(f"'{self.processing_type=}' dump() must have root_tag and child_tag by type(Element)")
 
         fp = None
         mode = ''
@@ -213,35 +245,43 @@ class XmlHandler(FileformatBase):
             child_tag = self.child_tag
 
         try:
-            if isinstance(data, ET.Element):
+            if isinstance(data, et._ElementTree):
                 data.write(fp, encoding='utf-8', xml_declaration=True)
+            if isinstance(data, et._Element):
+                tree = et.ElementTree(data)
+                tree.write(fp, encoding='utf-8', xml_declaration=True)
             # dataframe -> json array
             elif isinstance(data, pd.DataFrame):
                 df: pd.DataFrame = data
                 # dataframe 에서 직접 XML 생성
-                root = ET.Element(root_tag)
+                new_root = et.Element(self.root.tag, attrib=self.root.attrib, nsmap=self.root.nsmap)
+                # new_root = et.Element(self.root.tag, nsmap=self.root.nsmap)
                 for i in range(len(df)):
-                    row = ET.SubElement(root, child_tag)
+                    row = et.SubElement(new_root, child_tag, nsmap=self.root.nsmap)
                     for column in df.columns:
                         value = str(df[column].iloc[i])
-                        element = ET.SubElement(row, column)
-                        element.text = value
+                        if 'text' == column:
+                            row.text = value
+                        elif 'tag' == column:
+                            pass
+                        else:
+                            row.set(column, value)
 
-                    tree = ET.ElementTree(root)
-                    tree.write(fp, encoding=self.encoding, xml_declaration=True)
+                tree = et.ElementTree(new_root)
+                tree.write(fp, encoding=self.encoding, xml_declaration=True, pretty_print=True)
 
             # data is list -> json array
             elif isinstance(data, list) and all(isinstance(item, dict) for item in data):
                 # list 에서 직접 XML 생성
-                root = ET.Element(root_tag)
+                root = et.Element(root_tag, nsmap=self.root.nsmap)
                 for item in data:
-                    row = ET.SubElement(root, child_tag)
-                    for key in dict:
-                        element = ET.SubElement(row, key)
-                        element.text = dict[key]
+                    # item is a dict
+                    row = et.SubElement(root, child_tag, nsmap=self.root.nsmap)
+                    for key in item:
+                        row.set(key, item[key])
 
-                    tree = ET.ElementTree(root)
-                    tree.write(fp, encoding=self.encoding, xml_declaration=True)
+                tree = et.ElementTree(root)
+                tree.write(fp, encoding=self.encoding, xml_declaration=True)
             else:
                 dict_list = []
                 self.fail_list.append(data)
@@ -250,36 +290,29 @@ class XmlHandler(FileformatBase):
             self.fail_list.append(data)
             logger.error(f"{fp=}, {binary_mode=}, {opened=}, {self.processing_type=} dump raise: {e}")
 
-
-        if opened and fp:
+        if opened and fp is not None:
             fp.close()
 
-    def dumps(self, mode: Literal['text', 'binary'] = 'text',
-              data=None, root_tag=None, child_tag=None) -> Union[str, bytes]:
-        """JSON 데이터를 문자열 또는 바이너리 형태로 출력
+    def dumps(self, data=None, root_tag=None, child_tag=None) -> str:
+        """XML 데이터를 형태로 출력
 
         파일은 text, binary 모드 파일객체이거나 파일명 문자열
+
         Args:
-            mode (str): 출력 모드 'text' 또는 'binary' 선택
             data (): 출력할 데이터, 생략되면 self.data_df 사용
-            root_tag (str): XML 파일은 전체를 묶을 루트 노드가 필요. 지정하지 않으면 이전 load()에서 얻은 값이나 초기값 'data' 사용
-            child_tag (str): 루트 노드 아래 자식노드도 이름 필요. 지정하지 않으면 이전 load()에서 얻은 값이나 초기값 'row' 사용
 
         Returns:
-            데이터를 'text' 모드에서는 문자열, 'binary' 모드에서는 bytes 출력
+            XML 데이터를 문자열로 출력
         """
         try:
-            file_obj = None
-            if 'text' == mode:
-                file_obj = io.StringIO()
-            elif 'binary' == mode:
-                file_obj = io.BytesIO()
+            file_obj = io.BytesIO()
 
             if file_obj:
                 self.dump(file_obj, data=data, root_tag=root_tag, child_tag=child_tag)
-                return file_obj.getvalue()
+                xml_bytes = file_obj.getvalue()
+                return xml_bytes.decode(encoding=self.encoding)
         except Exception as e:
-            logger.error(f"mode='{mode}', {self.processing_type=} dump raise: {e}")
+            logger.error(f"{self} dump raise: {e}")
         return ""
 
 
@@ -287,4 +320,19 @@ class XmlHandler(FileformatBase):
     클래스 내부 메쏘드 
     """
 
+    def _decide_rw_open_mode(self, method_name) -> str:
+        """내부메쏘드 json_type 과 method_name 에 따라서 파일 일기/쓰기 오픈 모드 결정
 
+        XML은 binary 로 처리 필요
+
+        Args:
+            method_name: 'load' or 'dump'
+
+        Returns: Literal['r', 'w', 'rb', 'wb']
+        """
+        if 'dump' == method_name:
+            return 'wb'
+        elif 'load' == method_name:
+            return 'rb'
+        else:
+            raise TypeError(f"method_name='{method_name}'] not supported yet.")

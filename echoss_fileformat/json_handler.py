@@ -278,33 +278,29 @@ class JsonHandler(FileformatBase):
         if opened and fp:
             fp.close()
 
-    def dumps(self,
-              mode: Literal['text', 'binary'] = 'text', data=None, data_key='') -> Union[str, bytes]:
+    def dumps(self, data=None, data_key='') -> str:
         """JSON 데이터를 문자열 또는 바이너리 형태로 출력
 
         파일은 text, binary 모드 파일객체이거나 파일명 문자열
+
         Args:
-            mode (str): 출력 모드 'text' 또는 'binary' 선택
             data (): 출력할 데이터, 생략되면 self.data_df 사용
             data_key (str): 출력을 json object 로 한번 더 감쌀 경우에 사용
 
         Returns:
-            데이터를 'text' 모드에서는 문자열, 'binary' 모드에서는 bytes 출력
+            데이터를 문자열로 출력
         """
         if self.processing_type == FileformatBase.TYPE_OBJECT:
             if not data:
                 raise TypeError(f"dumps() method must have data parameter if {self.processing_type=}")
         try:
-            file_obj = None
-            if 'text' == mode:
-                file_obj = io.StringIO()
-            elif 'binary' == mode:
-                file_obj = io.BytesIO()
+            file_obj = io.BytesIO()
             if file_obj:
                 self.dump(file_obj, data=data, data_key=data_key)
-                return file_obj.getvalue()
+                json_bytes = file_obj.getvalue()
+                return json_bytes.decode(encoding=self.encoding)
         except Exception as e:
-            logger.error(f"mode='{mode}', {self.processing_type=}  dumps raise: {e}")
+            logger.error(f"{str(self)}  dumps raise: {e}")
         return ""
 
     """

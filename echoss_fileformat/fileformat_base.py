@@ -48,6 +48,9 @@ class FileformatBase:
         self.pass_list = []
         self.fail_list = []
 
+    def __str__(self):
+        return f"\{type: {self.type}, processing_type: {self.processing_type}, encoding: {self.encoding}\}"
+
     def load(self, file_or_filename: Union[io.TextIOWrapper, io.BytesIO, str]) -> Optional[object]:
         """파일에서 데이터를 읽기
 
@@ -93,15 +96,14 @@ class FileformatBase:
         """
         pass
 
-    def dumps(self, mode: Literal['text', 'binary'] = 'text', data=None) -> Union[str, bytes]:
+    def dumps(self, data=None) -> str:
         """데이터를 문자열 형태로 출력
 
         Args:
-            mode (): 출력 모드 'text' 또는 'binary' 선택
             data (): 출력할 데이터, 생략되면 self.data 사용
 
         Returns:
-            데이터를 text 모드에서는 str, 'binary' 모드에서는 bytes 타입 출력
+            데이터를 문자열로 출력
         """
         pass
 
@@ -153,10 +155,10 @@ class FileformatBase:
         if open_mode not in ['r', 'w', 'a', 'rb', 'wb', 'ab']:
             raise TypeError(f"{open_mode=} is not supported")
 
-        if isinstance(file_or_filename, io.TextIOWrapper):
+        if isinstance(file_or_filename, (io.TextIOWrapper, io.StringIO)):
             binary_mode = False
         # AWS s3 use io.BytesIO
-        elif isinstance(file_or_filename, io.BytesIO):
+        elif isinstance(file_or_filename, (io.BytesIO, io.RawIOBase)):
             binary_mode = True
         # open 'rb' use io.BufferedIOBase (BufferedReader or BufferedWriter)
         elif isinstance(file_or_filename, io.BufferedIOBase):

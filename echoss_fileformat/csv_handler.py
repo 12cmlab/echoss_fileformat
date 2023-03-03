@@ -16,7 +16,7 @@ class CsvHandler(FileformatBase):
     """
 
     def __init__(self, processing_type='array', encoding='utf-8', error_log='error.log',
-                 delimiter=',', quotechar='"', escapechar='\\'):
+                 delimiter=',', quotechar='"', quoting=0, escapechar='\\'):
         """CSV 파일 핸들러 초기화 메쏘드
 
         학습데이터는 processing_type='array' 사용. 누적 후 to_pandas()로 최종 dataframe 획득
@@ -29,11 +29,13 @@ class CsvHandler(FileformatBase):
             error_log: 파일 처리 실패 시 에러 저장 파일명
             delimiter: 컬럼 구분자 (실제 구현 함수에서는 sep 으로 변경. 추후 변경 가능성)
             quotechar: 인용 문자
+            quoting (int): 인용문자 사용빈도에 정책,  0: QUOTE_MINIMAL, 1: QUOTE_ALL, 2: QUOTE_NONNUMERIC, 3: QUOTE_NONE
             escapechar: 예외처리 문자
         """
         super().__init__(processing_type=processing_type, encoding=encoding, error_log=error_log)
         self.delimiter = delimiter
         self.quotechar = quotechar
+        self.quoting = quoting
         self.escapechar = escapechar
 
     def load(self, file_or_filename: Union[io.TextIOWrapper, io.BytesIO, io.BufferedIOBase, str],
@@ -156,7 +158,7 @@ class CsvHandler(FileformatBase):
                 self.fail_list.clear()
         return self.data_df
 
-    def dump(self, file_or_filename, quoting=0, data: pd.DataFrame = None):
+    def dump(self, file_or_filename, data: pd.DataFrame = None):
         """데이터를 CSV 파일로 쓰기
 
         파일은 text, binary 모드 파일객체이거나 파일명 문자열
@@ -182,7 +184,7 @@ class CsvHandler(FileformatBase):
                 sep=self.delimiter,
                 quotechar=self.quotechar,
                 escapechar=self.escapechar,
-                quoting=quoting,
+                quoting=self.quoting,
                 index=False
             )
         except Exception as e:
@@ -193,26 +195,21 @@ class CsvHandler(FileformatBase):
                 fp.close()
 
 
-    def dumps(self, mode: Literal['text', 'binary'] = 'text', quoting=0, data: pd.DataFrame = None) -> Union[str, bytes]:
+    def dumps(self, data: pd.DataFrame = None) -> str:
         """데이터를 CSV 파일로 쓰기
 
         파일은 text, binary 모드 파일객체이거나 파일명 문자열
         Args:
-            mode (str): 출력 모드 'text' 또는 'binary' 선택
-            quoting (int): 인용문자 사용 빈도에 대한 정책 0: QUOTE_MINIMAL, 1: QUOTE_ALL, 2: QUOTE_NONNUMERIC, 3: QUOTE_NONE
             data: 내장 dataframe 대신 사용할 data. 기능 확장성과 호환성을 위해서 남김
         Returns:
             없음
         """
-        if 'binary' == mode:
-            file_obj = io.BytesIO()
-        else:  # 'text'
-            file_obj = io.StringIO()
+        file_obj = io.StringIO()
 
         try:
-            self.dump(file_obj, quoting=quoting, data=data)
+            self.dump(file_obj, data=data)
         except Exception as e:
-            logger.error(f"mode='{mode}' '{quoting}' dumps raise {e}")
+            logger.error(f"{self.processing_type=} dumps raise {e}")
         return file_obj.getvalue()
 
     """
