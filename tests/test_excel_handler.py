@@ -38,6 +38,49 @@ class MyTestCase(unittest.TestCase):
     유닛 테스트 
     """
 
+    def test_object_type(self):
+        """메타데이터의 목적으로 파일 그대로 읽어주는 'object' 방식의 기능 테스트
+        """
+        expect_shape = (101, 8)
+        load_filename = 'test_data/multiheader_table.xlsx'
+        dump_filename = 'test_data/multiheader_table_to_delete_object.xlsx'
+        try:
+            handler = ExcelHandler(processing_type='object')
+            df = handler.load(load_filename, header=[3,4])
+
+            # t_pandas() 사용하지 않음
+            if df is not None:
+                if verbose:
+                    print_table(df, logger.info)
+                load_columns = list(df.columns)
+                load_shape = df.shape
+                logger.info(f"\t expect dataframe shape={expect_shape} and get {load_shape}")
+                # self.assertEqual(load_shape, expect_shape)
+            else:
+                logger.info('\t empty dataframe')
+
+            handler.dump(dump_filename, sheet_name="오브젝트", data=df)
+            exist = os.path.exists(dump_filename)
+
+            if exist:
+                check_handler = ExcelHandler(processing_type='object')
+                check_df = check_handler.load(dump_filename, header=[0,1])
+                # check_df = check_handler.to_pandas()
+                dump_columns = list(check_df.columns)
+                dump_shape = check_df.shape
+            if exist and 'to_delete' in dump_filename:
+                os.remove(dump_filename)
+
+        except Exception as e:
+            logger.error(f"\t File load fail by {e}")
+            # self.assertTrue(True, f"\t File load fail by {e}")
+        else:
+            logger.info(f"\t assert not equal {load_shape=} and {dump_shape}")
+            self.assertNotEqual(load_shape,  dump_shape)
+            logger.info(f"\t assert list equal {load_columns=}, {dump_columns[1:]=}")
+            self.assertListEqual(load_columns, dump_columns[1:])
+
+
     def test_basic_excel(self):
         expect_pass = 1
         expect_fail = 0

@@ -51,10 +51,11 @@ class CsvHandler(FileformatBase):
         """
         try:
             # file_or_filename 객체가 지원되는 file-like object 또는 filename string 인지 검사
-            self._check_file_or_filename(file_or_filename)
+            open_mode = self._decide_rw_open_mode('load')
+            fp, binary_mode, opened = self._get_file_obj(file_or_filename, open_mode)
 
             df = pd.read_csv(
-                file_or_filename,
+                fp,
                 encoding=self.encoding,
                 sep=self.delimiter,
                 quotechar=self.quotechar,
@@ -67,11 +68,17 @@ class CsvHandler(FileformatBase):
                 on_bad_lines='warn'
             )
 
-            self.pass_list.append(df)
-            return self.to_pandas()
+            if self.processing_type == FileformatBase.TYPE_OBJECT:
+                return df
+            else:
+                self.pass_list.append(df)
         except Exception as e:
             self.fail_list.append(str(file_or_filename))
-            logger.error(f"{file_or_filename} load raise {e}")
+            logger.error(f"{file_or_filename} load raise: {e}")
+        finally:
+            if opened and fp:
+                fp.close()
+
 
     def loads(self, str_or_bytes: Union[str, bytes],
               header=0, skiprows=0, nrows=None, usecols=None) -> pd.DataFrame:
@@ -92,7 +99,9 @@ class CsvHandler(FileformatBase):
                 file_obj = io.BytesIO(str_or_bytes)
 
             if file_obj:
-                return self.load(file_obj, header=header, skiprows=skiprows, nrows=nrows, usecols=usecols)
+                df = self.load(file_obj, header=header, skiprows=skiprows, nrows=nrows, usecols=usecols)
+                if self.processing_type == FileformatBase.TYPE_OBJECT:
+                    return df
         except Exception as e:
             self.fail_list.append(str_or_bytes)
             logger.error(f"'{str_or_bytes}' loads raise {e}")
@@ -106,6 +115,10 @@ class CsvHandler(FileformatBase):
 
         Returns: pandas DataFrame
         """
+        if self.processing_type == CsvHandler.TYPE_OBJECT:
+            logger.error(f"{self.processing_type} not support to_pandas() method")
+            raise TypeError(f"processing_type '{self.processing_type}' support to_pandas() method")
+
         if len(self.pass_list) > 0:
             try:
                 if len(self.data_df) > 0:
@@ -115,7 +128,7 @@ class CsvHandler(FileformatBase):
                 merge_df = pd.concat(df_list, ignore_index=True)
                 self.data_df = merge_df
             except Exception as e:
-                logger.error(f"pass_list[{len(self.pass_list)}] _to_pandas raise {e}")
+                logger.error(f"pass_list[{len(self.pass_list)}] to_pandas raise: {e}")
                 self.fail_list.extend(self.pass_list)
             finally:
                 self.pass_list.clear()
@@ -125,7 +138,7 @@ class CsvHandler(FileformatBase):
             try:
                 error_fp = open(self.error_log, mode='ab')
             except Exception as e:
-                logger.error(f"fail_list[{len(self.fail_list)}] error log append raise {e}")
+                logger.error(f"fail_list[{len(self.fail_list)}] error log append raise: {e}")
 
             if error_fp:
                 for fail in self.fail_list:
@@ -154,20 +167,31 @@ class CsvHandler(FileformatBase):
 
             data: dataframe 으로 설정시 사용. 기존 유틸리티의 호환성을 위해서 남김
         """
-        if not data:
-            df = self.to_pandas()
-        else:
-            df = data
+        open_mode = self._decide_rw_open_mode('dump')
+        fp, binary_mode, opened = self._get_file_obj(file_or_filename, open_mode)
 
-        df.to_csv(
-            file_or_filename,
-            encoding=self.encoding,
-            sep=self.delimiter,
-            quotechar=self.quotechar,
-            escapechar=self.escapechar,
-            quoting=quoting,
-            index=False
-        )
+        try:
+            if not data:
+                df = self.to_pandas()
+            else:
+                df = data
+
+            df.to_csv(
+                fp,
+                encoding=self.encoding,
+                sep=self.delimiter,
+                quotechar=self.quotechar,
+                escapechar=self.escapechar,
+                quoting=quoting,
+                index=False
+            )
+        except Exception as e:
+            self.fail_list.append(str(file_or_filename))
+            logger.error(f"{file_or_filename} load raise: {e}")
+        finally:
+            if opened and fp:
+                fp.close()
+
 
     def dumps(self, mode: Literal['text', 'binary'] = 'text', quoting=0, data: pd.DataFrame = None) -> Union[str, bytes]:
         """데이터를 CSV 파일로 쓰기

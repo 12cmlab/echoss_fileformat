@@ -43,41 +43,36 @@ class JsonHandler(FileformatBase):
             dictionary object if processing_type is 'object', else None
 
         """
+        root_json = None
         open_mode = self._decide_rw_open_mode('load')
         # file_or_filename 클래스 유형에 따라서 처리 방법이 다름
-        fp, mode, opened = self._get_file_obj(file_or_filename, open_mode)
+        fp, binary_mode, opened = self._get_file_obj(file_or_filename, open_mode)
 
         if self.processing_type == FileformatBase.TYPE_ARRAY:
             try:
                 root_json = json.load(fp)
                 self._update_json_data(root_json, data_key)
             except Exception as e:
-                file_bytes = fp.read()
-                if len(file_bytes) > 0:
-                    self.fail_list.append(file_bytes)
-                logger.error(f"{fp=}, mode='{mode}' {opened=} json_type='{self.processing_type}' load raise {e}")
+                self.fail_list.append(str(fp))
+                logger.error(f"{fp=}, {binary_mode=}, {opened=}, {self.processing_type=} load raise: {e}")
         elif self.processing_type == FileformatBase.TYPE_MULTILINE:
             for line in fp:
                 try:
-                    if 'text' == mode:
-                        line_str = line
-                        line_obj = json.loads(line_str)
-                        self._update_json_data(line_obj, data_key)
-                    elif 'binary' == mode:
+                    if binary_mode:
                         line_str = line.decode(self.encoding)
-                        line_obj = json.loads(line_str)
-                        self._update_json_data(line_obj, data_key)
+                    else:
+                        line_str = line
+                    line_obj = json.loads(line_str)
+                    self._update_json_data(line_obj, data_key)
                 except Exception as e:
                     self.fail_list.append(line)
-                    logger.error(f"{fp=}, mode='{mode}' {opened=} json_type='{self.processing_type}' load raise {e}")
+                    logger.error(f"{fp=}, {binary_mode=} {opened=} json_type='{self.processing_type}' load raise {e}")
         elif self.processing_type == FileformatBase.TYPE_OBJECT:
             try:
                 root_json = json.load(fp)
             except Exception as e:
-                file_bytes = fp.read()
-                if len(file_bytes) > 0:
-                    self.fail_list.append(file_bytes)
-                logger.error(f"{fp=}, mode='{mode}' {opened=} json_type='{self.processing_type}' load raise {e}")
+                self.fail_list.append(str(fp))
+                logger.error(f"{fp=}, {binary_mode=}, {opened=}, {self.processing_type=} load raise: {e}")
         # close opened file if filename
         if opened and fp:
             fp.close()
@@ -185,13 +180,13 @@ class JsonHandler(FileformatBase):
         try:
             open_mode = self._decide_rw_open_mode('dump')
             # file_or_filename 클래스 유형에 따라서 처리 방법이 다름
-            fp, mode, opened = self._get_file_obj(file_or_filename, open_mode)
+            fp, binary_mode, opened = self._get_file_obj(file_or_filename, open_mode)
             if not data:
                 # dataframe 에 추가할 것 있으면 concat
                 data = self.to_pandas()
         except Exception as e:
             self.fail_list.append(data)
-            logger.error(f"{fp=}, mode='{mode}' {opened=} '{self.processing_type}' dump raise {e}")
+            logger.error(f"{fp=}, {binary_mode=}, {opened=}, '{self.processing_type}' dump raise: {e}")
 
         # json_type 구분
         if self.processing_type == FileformatBase.TYPE_ARRAY:
@@ -205,7 +200,7 @@ class JsonHandler(FileformatBase):
                 else:
                     json_list = []
                     self.fail_list.append(data)
-                    logger.error(f"{fp=}, mode='{mode}' {opened=} '{self.processing_type}', {type(data)} is not list")
+                    logger.error(f"{fp=}, {binary_mode=}, {opened=}, '{self.processing_type}', {type(data)} is not list")
 
                 if data_key:
                     # dump_key = f"'{data_key}'"
@@ -214,7 +209,7 @@ class JsonHandler(FileformatBase):
                     json.dump(json_list, fp)
             except Exception as e:
                 self.fail_list.append(data)
-                logger.error(f"{fp=}, mode='{mode}' {opened=} '{self.processing_type}' dump raise {e}")
+                logger.error(f"{fp=}, {binary_mode=}, {opened=}, '{self.processing_type}' dump raise: {e}")
 
         # 'multiline' 유형에서는 강제로 binary 모드를 사용한다
         elif self.processing_type == FileformatBase.TYPE_MULTILINE:
@@ -231,7 +226,7 @@ class JsonHandler(FileformatBase):
                     json_list = [data]
                 else:
                     json_list = None
-                    logger.error(f"{fp=}, mode='{mode}' {opened=} '{self.processing_type}' no support {type(data)}")
+                    logger.error(f"{fp=}, {binary_mode=}, {opened=}, '{self.processing_type}' no support {type(data)}")
 
                 if json_list and len(json_list) > 0:
                     for row in json_list:
@@ -249,10 +244,10 @@ class JsonHandler(FileformatBase):
                             fp.write(b'\n')
                         except Exception as e:
                             self.fail_list.append(row)
-                            logger.error(f"{fp=}, mode='{mode}' {opened=} json_type='{self.processing_type}' raise {e}")
+                            logger.error(f"{fp=}, {binary_mode=}, {opened=}, {self.processing_type=} raise: {e}")
             except Exception as e:
                 self.fail_list.append(data)
-                logger.error(f"{fp=}, mode='{mode}' {opened=} json_type='{self.processing_type}' dump raise {e}")
+                logger.error(f"{fp=}, {binary_mode=}, {opened=}, {self.processing_type=} dump raise: {e}")
 
         if self.processing_type == FileformatBase.TYPE_OBJECT:
             try:
@@ -278,7 +273,7 @@ class JsonHandler(FileformatBase):
                     json.dump(json_obj, fp)
             except Exception as e:
                 self.fail_list.append(data)
-                logger.error(f"{fp=}, mode='{mode}' {opened=} '{self.processing_type}' dump raise {e}")
+                logger.error(f"{fp=}, {binary_mode=}, {opened=}, {self.processing_type=} dump raise: {e}")
 
         if opened and fp:
             fp.close()
@@ -309,7 +304,7 @@ class JsonHandler(FileformatBase):
                 self.dump(file_obj, data=data, data_key=data_key)
                 return file_obj.getvalue()
         except Exception as e:
-            logger.error(f"mode='{mode}' json_type='{self.processing_type}' dumps raise {e}")
+            logger.error(f"mode='{mode}', {self.processing_type=}  dumps raise: {e}")
         return ""
 
     """
@@ -325,19 +320,19 @@ class JsonHandler(FileformatBase):
 
         """
         # data_key 처리
-        if data_key:
+        if data_key and self.processing_type is not FileformatBase.TYPE_OBJECT:
             if data_key in json_obj:
                 json_value = json_obj[data_key]
                 if isinstance(json_value, str):
                     json_obj = json.loads(json_value)
                 elif isinstance(json_value, list):
-                    pass
+                    json_obj = json_value
                 else:
                     self.fail_list.append(json_obj)
-                    raise TypeError(f"json_obj['{data_key}'] {type(json_value)} not supported")
+                    logger.error(f"json_obj['{data_key}'] {type(json_value)} not supported")
             else:
                 self.fail_list.append(json_obj)
-                raise TypeError(f"json_obj['{data_key}'] must exist")
+                logger.error(f"json_obj['{data_key}'] must exist")
 
         # json_obj 처리
         if self.processing_type == FileformatBase.TYPE_ARRAY:
@@ -348,13 +343,13 @@ class JsonHandler(FileformatBase):
             #     self.pass_list.append(json_obj)
             else:
                 self.fail_list.append(json_obj)
-                raise TypeError(f"json_obj['{data_key}'] in {self.processing_type=} must be a list but {type(json_obj)}")
+                logger.error(f"json_obj['{data_key}'] in {self.processing_type=} must be a list but {type(json_obj)}")
         elif self.processing_type == FileformatBase.TYPE_MULTILINE:
             if isinstance(json_obj, dict):
                 self.pass_list.append(json_obj)
             else:
                 self.fail_list.append(json_obj)
-                raise TypeError(f"json_obj['{data_key}'] in {self.processing_type=} must be a dict")
+                logger.error(f"json_obj['{data_key}'] in {self.processing_type=} must be a dict")
         elif self.processing_type == FileformatBase.TYPE_OBJECT:
             self.pass_list.append(json_obj)
 

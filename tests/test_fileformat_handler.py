@@ -36,7 +36,7 @@ class FileformatHandlerTestCase(unittest.TestCase):
         filename = 'test_data_wrong/complex_one.json'
         open_mode = 'r'
         with self.assertRaises(FileNotFoundError) as context:
-            fp, mode, opened = handler._get_file_obj(filename, open_mode)
+            fp, binary_mode, opened = handler._get_file_obj(filename, open_mode)
             if opened:
                 fp.close()
         self.assertTrue(filename in str(context.exception))
@@ -45,7 +45,7 @@ class FileformatHandlerTestCase(unittest.TestCase):
         filename = 'test_data_wrong/complex_one.json'
         open_mode = 'w'
         with self.assertRaises(FileNotFoundError) as context:
-            fp, mode, opened = handler._get_file_obj(filename, open_mode)
+            fp, binary_mode, opened = handler._get_file_obj(filename, open_mode)
             if opened:
                 fp.close()
         self.assertTrue(filename in str(context.exception))
@@ -87,7 +87,7 @@ class FileformatHandlerTestCase(unittest.TestCase):
         for filename, open_mode in zip(filenames, open_modes):
             handler = FileformatBase()
             fp, mode, opened = handler._get_file_obj(filename, open_mode)
-            logger.info(f"{fp=} {mode=} {opened=}")
+            # logger.info(f"{fp=} {mode=} {opened=}")
 
             if open_mode in ['r', 'rb']:
                 try:
@@ -105,8 +105,10 @@ class FileformatHandlerTestCase(unittest.TestCase):
                 fp.close()
 
             if open_mode in ['r', 'rb']:
+                logger.info(f"assertEqual({len(line_list)}, 15)")
                 self.assertEqual(len(line_list), 15)
             elif open_mode in ['w', 'wb']:
+                logger.info(f"{os.path.exists(filename)=} and {(os.path.getsize(filename) > 0)=} are all True ")
                 self.assertTrue(os.path.exists(filename))
                 self.assertTrue(os.path.getsize(filename) > 0)
                 if '_to_delete' in filename:
@@ -140,9 +142,10 @@ class FileformatHandlerTestCase(unittest.TestCase):
             else:
                 fp = open(filename, open_mode, encoding='utf-8')
 
-            result_fp, mode, opened = handler._get_file_obj(fp, open_mode)
-            logger.info(f"{result_fp=} {mode=} {opened=}")
+            result_fp, binary_mode, opened = handler._get_file_obj(fp, open_mode)
 
+            # logger.info(f"{result_fp=}. {binary_mode=}, {opened=}")
+            logger.info(f"assertTrue {isinstance(fp, expect_instance)=}")
             self.assertTrue(isinstance(fp, expect_instance))
 
             if fp:
