@@ -73,7 +73,7 @@ def print_dataframe(df, method):
     method(plus + separator + plus)
 
 
-def print_table(df: pd.DataFrame, method, index=False, max_cols=20, max_rows=5, col_space=16, max_colwidth=24):
+def print_table(df: pd.DataFrame, method, index=False, max_cols=20, max_rows=10, col_space=16, max_colwidth=24):
     method(table_to_string(df, index=index, max_cols=max_cols, max_rows=max_rows, col_space=col_space, max_colwidth=max_colwidth))
 
 
@@ -95,4 +95,4 @@ def print_taburate(df: pd.DataFrame, method):
     data = df.values.tolist()
 
     # Print table
-    method(tabulate(data, headers=df.columns, tablefmt='pipe'))
+    method('\n'+tabulate(data, headers=df.columns, tablefmt='pipe')+'\n')

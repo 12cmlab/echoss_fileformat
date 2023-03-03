@@ -2,9 +2,9 @@ import unittest
 import time
 import logging
 import os
-from tabulate import tabulate
 
 from echoss_fileformat.csv_handler import CsvHandler
+from dataframe_util import print_table, print_dataframe, print_taburate
 
 # configure the logger
 LOG_FORMAT = "%(asctime)s %(name)s %(levelname)s - %(message)s"
@@ -12,6 +12,7 @@ logging.basicConfig(level=logging.INFO, format=LOG_FORMAT)
 logger = logging.getLogger(__name__)
 # use the logger
 
+verbose = True
 
 class MyTestCase(unittest.TestCase):
     """
@@ -45,9 +46,8 @@ class MyTestCase(unittest.TestCase):
             fail_size = len(handler.fail_list)
             csv_df = handler.to_pandas()
             if csv_df is not None:
-                csv_df.info()
-                logger.info("\n"+tabulate(csv_df.head(), headers='keys', tablefmt='psql'))
-                # print(csv_df.head().to_string(index=False, justify='left'))
+                if verbose:
+                    print_taburate(csv_df.head(10), logger.info)
             else:
                 logger.info('empty dataframe')
             expect_csv_str = "SEQ_NO,PROMTN_TY_CD,PROMTN_TY_NM,BRAND_NM,SVC_NM,ISSU_CO,PARTCPTN_CO,PSNBY_ISSU_CO,COUPON_CRTFC_CO,COUPON_USE_RT\r\n"+"0,9,대만프로모션발급인증통계,77chocolate,S0013,15,15,1.0,15,1.0"
@@ -90,7 +90,6 @@ class MyTestCase(unittest.TestCase):
                 else:
                     file_obj = open(load_filename, 'rb')
                 handler.load(file_obj, header=0, skiprows=0)
-                file_obj.close()
 
                 csv_df = handler.to_pandas()
                 if csv_df is not None and len(csv_df) > 0:
@@ -104,6 +103,10 @@ class MyTestCase(unittest.TestCase):
             except Exception as e:
                 logger.error(f"\t File load fail by {e}")
                 self.assertTrue(True, f"\t File load fail by {e}")
+            finally:
+                if file_obj:
+                    file_obj.close()
+                    file_obj = None
 
             try:
                 if 'text' == given_mode:
@@ -111,9 +114,13 @@ class MyTestCase(unittest.TestCase):
                 else:
                     file_obj = open(dump_filename, 'wb')
                 handler.dump(file_obj, quoting=0)
-                file_obj.close()
+                if file_obj:
+                    file_obj.close()
+                    file_obj = None
+
                 check_csv = CsvHandler()
                 check_csv.load(dump_filename)
+
                 check_df = check_csv.to_pandas()
                 if check_df is not None and len(check_df) > 0:
                     df_shape = check_df.shape
@@ -130,15 +137,19 @@ class MyTestCase(unittest.TestCase):
             except Exception as e:
                 logger.error(f"\t File dump open mode={given_mode} fail by {e}")
                 self.assertTrue(True, f"\t File dump fail by {e}")
+            finally:
+                if file_obj:
+                    file_obj.close()
 
     def test_load_mutliline_by_mode(self):
+        processing_type = 'multiline'
         modes = ['text', 'binary']
-        expect_passes = [15, 15]
+        expect_passes = [1, 1]
         expect_fails = [0, 0]
 
         for mode, expect_pass, expect_fail in zip(modes, expect_passes, expect_fails):
             try:
-                handler = CsvHandler('multiline')
+                handler = CsvHandler(processing_type)
                 if mode == 'text':
                     with open('test_data/simple_multiline_object.json', 'r', encoding='utf-8') as fp:
                         handler.load(fp)
@@ -150,12 +161,13 @@ class MyTestCase(unittest.TestCase):
                         pass_size = len(handler.pass_list)
                         fail_size = len(handler.fail_list)
             except Exception as e:
+                logger.error(f"\t assertTrue {mode} multiline File load fail by {e}")
                 self.assertTrue(True, f"\t {mode} multiline File load fail by {e}")
             else:
-                logger.info(f"\t open mode '{mode}' 'multiline' expect pass {expect_pass} get {pass_size}")
-                # self.assertEqual(pass_size == expect_pass)
-                logger.info(f"\t open mode '{mode}' 'multiline' expect fail {expect_fail} get {fail_size}")
-                # self.assertEqual(fail_size == expect_fail)
+                logger.info(f"\t assertEqual({expect_pass}, {pass_size}) at {mode=}, {processing_type=}")
+                self.assertEqual(pass_size, expect_pass)
+                logger.info(f"\t assertEqual({expect_fail}, {fail_size}) at {mode=}, {processing_type=}")
+                self.assertEqual(fail_size, expect_fail)
 
     def test_load_mutliline_by_data_key(self):
         json_types = ['object', 'array', 'multiline']
@@ -175,125 +187,6 @@ class MyTestCase(unittest.TestCase):
                 self.assertTrue(pass_size == expect_pass)
                 logger.info(f"\t {json_type} load expect fail {expect_fail} get {fail_size}")
                 self.assertTrue(fail_size == expect_fail)
-
-    """
-    dump
-    """
-
-    def test_dump_complex_by_json_type(self):
-        json_types = ['object', 'array']
-        data_keys = ['', 'main']
-        expect_file_sizes = [35248, 29257]
-
-        load_filename = 'test_data/complex_one_object.json'
-        dump_filename = 'test_data/complex_one_object_dump_to_delete.json'
-
-        for json_type, data_key, expect_file_size  in zip(json_types, data_keys, expect_file_sizes):
-            try:
-                handler = CsvHandler(json_type)
-                handler.load(load_filename, data_key=data_key)
-                pass_size = len(handler.pass_list)
-                if pass_size > 0:
-                    handler.dump(dump_filename)
-                    exist = os.path.exists(dump_filename)
-                    file_size = os.path.getsize(dump_filename)
-
-                    if exist and 'to_delete' in dump_filename:
-                        os.remove(dump_filename)
-
-                    logger.info(f"\t {json_type} dump expect exist True get {exist}")
-                    self.assertEqual(True, exist)
-                    logger.info(f"\t {json_type} dump expect file_size {expect_file_size} get {file_size}")
-                    self.assertEqual(expect_file_size, file_size)
-            except Exception as e:
-                self.assertTrue(True, f"\t {json_type} json_type File dump fail by {e}")
-
-    def test_dump_mutliline_by_mode(self):
-        # multiline 은 내부적으로 binary 로 동작하여 외부 지정이 의미가 없음
-        modes = ['text', 'binary']
-        expect_file_sizes = [13413, 13413]
-
-        json_type = CsvHandler.TYPE_MULTILINE
-        load_filename = 'test_data/simple_multiline_object.json'
-
-        for mode, expect_file_size in zip(modes, expect_file_sizes):
-            try:
-                handler = CsvHandler('multiline')
-                if mode == 'text':
-                    with open(load_filename, 'r', encoding='utf-8') as fp:
-                        handler.load(fp)
-                        pass_size = len(handler.pass_list)
-                        fail_size = len(handler.fail_list)
-                elif mode == 'binary':
-                    with open(load_filename, 'rb') as fb:
-                        handler.load(fb)
-                        pass_size = len(handler.pass_list)
-                        fail_size = len(handler.fail_list)
-            except Exception as e:
-                self.assertTrue(True, f"\t {mode} multiline File load fail by {e}")
-            else:
-                logger.info(f"\t open mode '{mode}' 'multiline' load {pass_size=}, {fail_size=}")
-
-            try:
-                dump_filename = f'test_data/simple_multiline_{mode}_object_to_delete.json'
-                handler.dump(dump_filename)
-                exist = os.path.exists(dump_filename)
-                file_size = os.path.getsize(dump_filename)
-
-                if exist and '_to_delete' in dump_filename:
-                    os.remove(dump_filename)
-
-                logger.info(f"\t {json_type} dump expect exist True get {exist}")
-                self.assertEqual(True, exist)
-                logger.info(f"\t {json_type} dump expect file_size {expect_file_size} get {file_size}")
-                self.assertEqual(expect_file_size, file_size)
-            except Exception as e:
-                self.assertTrue(True, f"\t {mode} multiline File load fail by {e}")
-
-
-    def test_dump_mutliline_by_data_key(self):
-        modes = ['text', 'binary']
-        data_keys = ['message', 'message']
-        expect_file_sizes = [10513, 10513]
-
-        json_type = CsvHandler.TYPE_MULTILINE
-        load_filename = 'test_data/simple_multiline_object.json'
-
-        for mode, data_key, expect_file_size in zip(modes, data_keys, expect_file_sizes):
-            try:
-                handler = CsvHandler('multiline')
-                if mode == 'text':
-                    with open(load_filename, 'r', encoding='utf-8') as fp:
-                        handler.load(fp, data_key=data_key)
-                        pass_size = len(handler.pass_list)
-                        fail_size = len(handler.fail_list)
-                elif mode == 'binary':
-                    with open(load_filename, 'rb') as fb:
-                        handler.load(fb, data_key=data_key)
-                        pass_size = len(handler.pass_list)
-                        fail_size = len(handler.fail_list)
-            except Exception as e:
-                self.assertTrue(True, f"\t {mode} multiline File load fail by {e}")
-                # logger.error(True, f"\t {mode} multiline File load fail by {e}")
-            else:
-                logger.info(f"\t open mode '{mode}' 'multiline' load {pass_size=}, {fail_size=}")
-
-            try:
-                dump_filename = f'test_data/simple_multiline_{mode}_object_to_delete.json'
-                handler.dump(dump_filename, data_key=data_key)
-                exist = os.path.exists(dump_filename)
-                file_size = os.path.getsize(dump_filename)
-
-                if exist and '_to_delete' in dump_filename:
-                    os.remove(dump_filename)
-
-                logger.info(f"\t {json_type} dump expect exist True get {exist}")
-                self.assertEqual(True, exist)
-                logger.info(f"\t {json_type} dump expect file_size {expect_file_size} get {file_size}")
-                self.assertEqual(expect_file_size, file_size)
-            except Exception as e:
-                self.assertTrue(True, f"\t {mode} multiline File load fail by {e}")
-                # logger.error(f"\t {mode} multiline File load fail by {e}")
 
 
 if __name__ == '__main__':

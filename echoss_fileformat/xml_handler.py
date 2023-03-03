@@ -51,7 +51,7 @@ class XmlHandler(FileformatBase):
             open_mode = self._decide_rw_open_mode('load')
 
             # file_or_filename 클래스 유형에 따라서 처리 방법이 다른 것을 일원화
-            fp, mode, opened = self._get_file_obj(file_or_filename, open_mode)
+            fp, binary_mode, opened = self._get_file_obj(file_or_filename, open_mode)
 
             # 전체 파일을 일고 나머지 처리
             tree = ET.parse(fp)
@@ -62,6 +62,9 @@ class XmlHandler(FileformatBase):
             self.fail_list.append(str(file_or_filename))
             logger.error(f"'{file_or_filename}' load raise {e}")
             raise e
+        finally:
+            if opened and fp:
+                fp.close()
 
         # 'object' 처리 유형의 파일 처리는 루트 트리를 바로 리턴
         if self.processing_type == FileformatBase.TYPE_OBJECT:
@@ -93,8 +96,6 @@ class XmlHandler(FileformatBase):
                 self.fail_list.append(str(child))
                 logger.error(f"'{file_or_filename}' load raise {e}")
 
-        if opened and fp:
-            fp.close()
 
     def loads(self, str_or_bytes: Union[str, bytes],
               data_key: str = None, usecols: list = None) -> Optional[ET.Element]:
@@ -133,7 +134,7 @@ class XmlHandler(FileformatBase):
         """
         if self.processing_type == FileformatBase.TYPE_OBJECT:
             logger.error(f"{self.processing_type} not support to_pandas() method")
-            return None
+            raise TypeError(f"processing_type '{self.processing_type}' support to_pandas() method")
 
         if len(self.pass_list) > 0:
             try:
@@ -198,13 +199,13 @@ class XmlHandler(FileformatBase):
         try:
             open_mode = self._decide_rw_open_mode('dump')
             # file_or_filename 클래스 유형에 따라서 처리 방법이 다름
-            fp, mode, opened = self._get_file_obj(file_or_filename, open_mode)
-            if not data:
+            fp, binary_mode, opened = self._get_file_obj(file_or_filename, open_mode)
+            if data is None:
                 # dataframe 에 추가할 것 있으면 concat
                 data = self.to_pandas()
         except Exception as e:
             self.fail_list.append(data)
-            logger.error(f"{fp=}, mode='{mode}' {opened=} '{self.json_type}' dump raise {e}")
+            logger.error(f"{fp=}, {binary_mode=}, {opened=}, {self.processing_type=} dump raise: {e}")
 
         if not root_tag:
             root_tag = self.root_tag
@@ -244,10 +245,11 @@ class XmlHandler(FileformatBase):
             else:
                 dict_list = []
                 self.fail_list.append(data)
-                logger.error(f"{fp=}, mode='{mode}' {opened=} but {type(data)} is supported")
+                logger.error(f"{fp=}, {binary_mode=}, {opened=}, {self.processing_type=} {type(data)} is not supported")
         except Exception as e:
             self.fail_list.append(data)
-            logger.error(f"{fp=}, mode='{mode}' {opened=} '{self.json_type}' dump raise {e}")
+            logger.error(f"{fp=}, {binary_mode=}, {opened=}, {self.processing_type=} dump raise: {e}")
+
 
         if opened and fp:
             fp.close()
@@ -277,28 +279,12 @@ class XmlHandler(FileformatBase):
                 self.dump(file_obj, data=data, root_tag=root_tag, child_tag=child_tag)
                 return file_obj.getvalue()
         except Exception as e:
-            logger.error(f"mode='{mode}' json_type='{self.json_type}' dumps raise {e}")
+            logger.error(f"mode='{mode}', {self.processing_type=} dump raise: {e}")
         return ""
+
 
     """
     클래스 내부 메쏘드 
     """
 
-    def _decide_rw_open_mode(self, method_name) -> str:
-        """내부메쏘드 json_type 과 method_name 에 따라서 파일 일기/쓰기 오픈 모드 결정
-
-        메쏘드에 입력된 매개변수가 filename 이라서 open() 호출 시에 mode 문자열을 결정하기위해서 사용
-
-        Args:
-            method_name: 'load' or 'dump'
-
-        Returns:
-            Literal['r', 'w', 'rb', 'wb']
-        """
-        if 'dump' == method_name:
-            return 'w'
-        elif 'load' == method_name:
-            return 'r'
-        else:
-            raise TypeError(f"'{self.processing_type}' method_name='{method_name}'] not supported yet.")
 

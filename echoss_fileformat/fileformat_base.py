@@ -4,7 +4,7 @@
 import io
 import logging
 import pandas as pd
-from typing import Dict, Literal, Optional, Union
+from typing import Literal, Optional, Tuple, Union
 
 logger = logging.getLogger(__name__)
 
@@ -111,7 +111,27 @@ class FileformatBase:
     
     """
 
-    def _get_file_obj(self, file_or_filename, open_mode: str):
+    def _decide_rw_open_mode(self, method_name) -> str:
+        """내부메쏘드 json_type 과 method_name 에 따라서 파일 일기/쓰기 오픈 모드 결정
+
+        메쏘드에 입력된 매개변수가 filename 이라서 open() 호출 시에 mode 문자열을 결정하기위해서 사용
+        'multiline' processing_type 을 사용하는 클래스는 별도 구현 필요.
+        그 이외에는 text 방식으로 r w 결정
+
+        Args:
+            method_name: 'load' or 'dump'
+
+        Returns:
+            Literal['r', 'w', 'rb', 'wb']
+        """
+        if 'dump' == method_name:
+            return 'w'
+        elif 'load' == method_name:
+            return 'r'
+        else:
+            raise TypeError(f"'{self.processing_type}' method_name='{method_name}'] not supported yet.")
+
+    def _get_file_obj(self, file_or_filename, open_mode: str) -> Tuple[object, bool, bool]:
         """클래스 내부 메쏘드 file_or_filename 의 instance type 을 확인하여 사용하기 편한 file object 로 변환
 
         Args:
@@ -119,41 +139,37 @@ class FileformatBase:
 
             open_mode(): Literal['r', 'w', 'a', 'rb', 'wb', 'ab']
 
-        Returns: file_obj, mode, opened
+        Returns: file_obj, binary_mode, opened
             file_obj: file object to read, write and split lines
 
-            mode: 'text' or 'binary'
+            binary_mode: True if 'binary' open mode, False else
 
             opened: True if file is opened in this method, False else
         """
         # file_or_filename 클래스 유형에 따라서 처리 방법이 다름
+        fp = file_or_filename
+        binary_mode = False
         opened = False
         if open_mode not in ['r', 'w', 'a', 'rb', 'wb', 'ab']:
             raise TypeError(f"{open_mode=} is not supported")
 
         if isinstance(file_or_filename, io.TextIOWrapper):
-            fp = file_or_filename
-            mode = 'text'
+            binary_mode = False
         # AWS s3 use io.BytesIO
         elif isinstance(file_or_filename, io.BytesIO):
-            fp = file_or_filename
-            mode = 'binary'
+            binary_mode = True
         # open 'rb' use io.BufferedIOBase (BufferedReader or BufferedWriter)
         elif isinstance(file_or_filename, io.BufferedIOBase):
-            fp = file_or_filename
             # fp = io.BytesIO(file_or_filename.read())
             if 'b' in fp.mode:
-                mode = 'binary'
-            else:
-                mode = 'text'
+                binary_mode = True
         elif isinstance(file_or_filename, str):
             try:
                 if 'b' in open_mode:
                     fp = open(file_or_filename, open_mode)
-                    mode = 'binary'
+                    binary_mode = True
                 else:
                     fp = open(file_or_filename, open_mode, encoding=self.encoding)
-                    mode = 'text'
             except Exception as e:
                 logger.error(f"{file_or_filename} is not exist filename or can not open mode='{open_mode}' encoding={self.encoding} {e}")
                 raise e
@@ -161,4 +177,4 @@ class FileformatBase:
                 opened = True
         else:
             raise TypeError(f"{file_or_filename} is not file obj")
-        return fp, mode, opened
+        return fp, binary_mode, opened

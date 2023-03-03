@@ -45,7 +45,7 @@ class ExcelHandler(CsvHandler):
             nrows (int): skiprows 부터 N개의 데이터 row 만 읽을 경우 숫자 지정
             usecols (Union[int, list]): 전체 컬럼 사용시 None, 컬럼 번호나 이름의 리스트 [0, 1, 2] or ['foo', 'bar', 'baz']
         """
-        mode = self._check_file_or_filename(file_or_filename)
+        # mode = self._check_file_or_filename(file_or_filename)
 
         try:
             df = pd.read_excel(
@@ -63,8 +63,8 @@ class ExcelHandler(CsvHandler):
                 if isinstance(df.columns, pd.MultiIndex):
                     df = df.drop([col for col in df.columns if 'Unnamed' in str(col)], axis=1)
 
-                    # 모든 column 값이 NaN 인 row는 제거
-                    df.dropna(how='all', inplace=True)
+                # 모든 column 값이 NaN 인 row는 제거
+                df.dropna(how='all', inplace=True)
                 self.pass_list.append(df)
             elif self.processing_type == CsvHandler.TYPE_OBJECT:
                 return df
@@ -118,6 +118,11 @@ class ExcelHandler(CsvHandler):
             sheet_name: 쉬트 이름.
             data: dataframe 으로 설정시 사용. 기존 유틸리티의 호환성을 위해서 남김
         """
+        if self.processing_type == CsvHandler.TYPE_OBJECT:
+            if data is None or not isinstance(data, pd.DataFrame):
+                logger.error(f"processing_type '{self.processing_type}' need data parameter")
+                raise TypeError(f"processing_type '{self.processing_type}' need data parameter")
+
         try:
             if data is None:
                 df = self.to_pandas()
@@ -130,10 +135,10 @@ class ExcelHandler(CsvHandler):
             use_index = False
             if isinstance(df.columns, pd.MultiIndex):
                 use_index = True
-            elif self.processing_type == CsvHandler.TYPE_OBJECT:
-                use_index = True
             elif not isinstance(df.index, pd.core.indexes.range.RangeIndex):
                 use_index = True
+            # elif self.processing_type == CsvHandler.TYPE_OBJECT:
+            #    use_index = True
 
             # # multi-header 문제떄문에 ExcelWriter 버전으로 대체. 효과는 없었엄. index=True 로 dump하고 후처리 방식으로 변경
             # df.to_excel(
