@@ -1,4 +1,4 @@
-# echoss_fileformat
+# echoss_fileformat v1.0
 
 # File Format Handlers
 
@@ -11,23 +11,41 @@ pip install echoss_fileformat
 
 ## Usage
 
+- 학습데이터가 아닌 메타데이터 객체로 읽어들일 경우
+
+handler = CsvHandler('object')
+
+- 학습데이터로 읽어들이는 경우 
+
+handler = ExcelHandler()
+또는 handler = ExcelHandler('array')
+
+- JSON 파일 중에서 각 줄이 하나의 json 객체일 경우
+
+handler = JsonHandler('multiline')
+
+
 The package provides an abstraction layer to load and save data in JSON, CSV, XML, and Excel formats. The API includes the following methods:
 
-* `load(file, **kwargs)`: Load data from a file.
-* `loads(string, **kwargs)`: Load data from a string.
-* `dump(data, file, **kwargs)`: Save data to a file.
-* `dumps(data, **kwargs)`: Save data to a string.
+* `load(file_or_filename, **kwargs)`: Load data from a file.
+* `loads(bytes_or_str, **kwargs)`: Load data from a string.
+* `dump(file_or_filename, data = None, **kwargs)`: Save data to a file.
+* `dumps(data = None, **kwargs)`: Save data to a string.
 
 The following example demonstrates how to load data from a CSV file and save it as a JSON file:
 
 ```python
-from echoss_fileformat import csv_handler, json_handler
+from echoss_fileformat import CsvHandler, JsonHandler
 
 # Load test_data from a CSV file
-data = csv_handler.load('test_data.csv')
+csv_handler = CsvHandler()
+data = csv_handler.load('test_data.csv', header=[0, 1])
 
 # Save test_data as a JSON file
-json_handler.dump(data, 'test_data.json')
+json_handler = JsonHandler('array')
+json_handler.load( 'test_data_1.json', data_key = 'data')
+json_handler.load( 'test_data_2.json', data_key = 'data')
+json_handler.dump( 'test_data_all.json')
 ```
 
 ## Contributing
