@@ -92,42 +92,61 @@ class XmlHandler(FileformatBase):
             return root
 
         # 'array' 처리 유형의 파일 처리
-        try:          # data_key 과 usecols 확인
+        # 'array' 모드에서는 tag 의 attrib 는 처리하지 않고, text 만 사용함
+        # 즉, <temperature>17.6</temperature> 형태를 'temperature': 17.6 으로 처리함
+        try:
+            # data_key 과 usecols 확인
             if not data_key:
                 data_nodes = root
             else:
+                # self.child_tag = data_key.split('/')[-1]
                 data_nodes = tree.findall(data_key, namespaces=root.nsmap)
         except Exception as e:
             self.fail_list.append(str(file_or_filename))
             logger.error(f"'{file_or_filename}' load raise: {e}")
             raise e
 
-        for child in data_nodes:
-            node_dict = {}
-            try:
-                if isinstance(child, et._ElementTree):
-                    if usecols:
-                        for sub_child in child:
-                            if sub_child.tag in usecols:
-                                node_dict[sub_child.tag] = sub_child.text
-                    else:
-                        for sub_child in child:
-                            node_dict[sub_child.tag] = sub_child.text
-                else:  # isinstance(child, et._Element)
-                    if usecols:
-                        for key in usecols:
-                            node_dict[key] = child.get(key)
-                    else:
-                        for k, v in child.items():
-                            node_dict[k] = v
-                    node_dict['text'] = child.text
-
+        try:
+            for child in data_nodes:
+                node_dict = {}
+                self._add_all_child_text(child, node_dict, usecols=usecols)
                 self.pass_list.append(node_dict)
                 self.child_tag = child.tag
-            except Exception as e:
-                self.fail_list.append(str(child))
-                logger.error(f"'{file_or_filename}' load raise {e}")
-
+            #
+            #
+            # else:
+            #     for child in data_nodes:
+            #         node_dict = {}
+            #         for sub_child in child:
+            #             node_key = et.QName(sub_child).localname
+            #             if node_key in usecols:
+            #                 node_dict[node_key] = sub_child.text
+            #
+            #
+            # for child in data_nodes:
+            #     node_dict = {}
+            #     try:
+            #         if isinstance(child, et._ElementTree):
+            #             if usecols:
+            #                 for sub_child in child:
+            #                     if sub_child.tag in usecols:
+            #                         node_dict[sub_child.tag] = sub_child.text
+            #             else:
+            #                 for sub_child in child:
+            #                     node_dict[sub_child.tag] = sub_child.text
+            #         else:  # isinstance(child, et._Element)
+            #             if usecols:
+            #                 for key in usecols:
+            #                     node_dict[key] = child.get(key)
+            #             else:
+            #                 for k, v in child.items():
+            #                     node_dict[k] = v
+            #             node_dict['text'] = str(child.text)
+            # self.pass_list.append(node_dict)
+            # self.child_tag = child.tag
+        except Exception as e:
+            self.fail_list.append(str(child))
+            logger.error(f"'{file_or_filename}' load raise {e}")
 
     def loads(self, str_or_bytes: Union[str, bytes],
               data_key: str = None, usecols: list = None) -> Optional[et.Element]:
@@ -245,27 +264,25 @@ class XmlHandler(FileformatBase):
             child_tag = self.child_tag
 
         try:
+            # 'object' 에서만 사용
             if isinstance(data, et._ElementTree):
                 data.write(fp, encoding='utf-8', xml_declaration=True)
-            if isinstance(data, et._Element):
+            # 'object' 에서만 사용
+            elif isinstance(data, et._Element):
                 tree = et.ElementTree(data)
                 tree.write(fp, encoding='utf-8', xml_declaration=True)
-            # dataframe -> json array
+            # dataframe -> xml
             elif isinstance(data, pd.DataFrame):
                 df: pd.DataFrame = data
                 # dataframe 에서 직접 XML 생성
                 new_root = et.Element(self.root.tag, attrib=self.root.attrib, nsmap=self.root.nsmap)
-                # new_root = et.Element(self.root.tag, nsmap=self.root.nsmap)
+
                 for i in range(len(df)):
                     row = et.SubElement(new_root, child_tag, nsmap=self.root.nsmap)
                     for column in df.columns:
+                        col_node = et.SubElement(row, column, nsmap=self.root.nsmap)
                         value = str(df[column].iloc[i])
-                        if 'text' == column:
-                            row.text = value
-                        elif 'tag' == column:
-                            pass
-                        else:
-                            row.set(column, value)
+                        col_node.text = value
 
                 tree = et.ElementTree(new_root)
                 tree.write(fp, encoding=self.encoding, xml_declaration=True, pretty_print=True)
@@ -289,9 +306,9 @@ class XmlHandler(FileformatBase):
         except Exception as e:
             self.fail_list.append(data)
             logger.error(f"{fp=}, {binary_mode=}, {opened=}, {self.processing_type=} dump raise: {e}")
-
-        if opened and fp is not None:
-            fp.close()
+        finally:
+            if opened and fp is not None:
+                fp.close()
 
     def dumps(self, data=None, root_tag=None, child_tag=None) -> str:
         """XML 데이터를 형태로 출력
@@ -336,3 +353,60 @@ class XmlHandler(FileformatBase):
             return 'rb'
         else:
             raise TypeError(f"method_name='{method_name}'] not supported yet.")
+
+    def _add_all_child_text(self, parent: et._Element, parent_dict: dict, usecols: list = None, parent_key=None):
+        """
+            element node 안의 모든 text 를 dictionary 에 추가
+        """
+        for child in parent:
+            node_key = et.QName(child).localname
+            if parent_key:
+                child_key = parent_key + '.' + node_key
+            else:
+                child_key = node_key
+
+            if len(child.getchildren()) > 0:
+                self._add_all_child_text(child, parent_dict, usecols=usecols, parent_key=child_key)
+            else:
+                if usecols is None or node_key in usecols:
+                    parent_dict[child_key] = self._text_to_type_object(child.text)
+
+    def _text_to_type_object(self, text: str):
+        """
+            child text 의 타입을 추정하여 object 값으로 변환
+        """
+        if text is None:
+            return None
+
+        if text.isalpha():
+            if 'true' == text.lower():
+                return True
+            elif 'false' == text.lower():
+                return False
+            else:
+                return text
+        # 숫자 계통일 가능성
+        else:
+            dot_count = 0
+            for c in text:
+                if c == '.':
+                    dot_count += 1
+                elif not c.isnumeric():
+                    return text
+
+            if dot_count == 0:
+                # Check if the text value can be converted to an int
+                try:
+                    value = int(text)
+                    return value
+                except ValueError:
+                    return text
+            elif dot_count == 1:
+                # Check if the text value can be converted to a float
+                try:
+                    value = float(text)
+                    return value
+                except ValueError:
+                    return text
+            else:
+                return text
