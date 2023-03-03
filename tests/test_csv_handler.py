@@ -51,7 +51,7 @@ class MyTestCase(unittest.TestCase):
             else:
                 logger.info('empty dataframe')
             expect_csv_str = "SEQ_NO,PROMTN_TY_CD,PROMTN_TY_NM,BRAND_NM,SVC_NM,ISSU_CO,PARTCPTN_CO,PSNBY_ISSU_CO,COUPON_CRTFC_CO,COUPON_USE_RT\r\n"+"0,9,대만프로모션발급인증통계,77chocolate,S0013,15,15,1.0,15,1.0"
-            csv_str = handler.dumps(mode='text', quoting=0)
+            csv_str = handler.dumps()
             # logger.info("[\n"+csv_str+"]")
             expect_file_size = 17827
             self.assertTrue(csv_str.startswith(expect_csv_str), "startswith fail")

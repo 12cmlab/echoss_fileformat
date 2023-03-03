@@ -155,8 +155,7 @@ class ExcelHandler(CsvHandler):
         except Exception as e:
             logger.error(f"'{str(file_or_filename)}' dump raise {e}")
 
-    def dumps(self, mode: Literal['text', 'binary'] = 'text', sheet_name='Sheet1',
-              data: pd.DataFrame = None) -> Union[str, bytes]:
+    def dumps(self, sheet_name='Sheet1', data: pd.DataFrame = None) -> str:
         """데이터를 CSV 파일로 쓰기
 
         파일은 text, binary 모드 파일객체이거나 파일명 문자열
@@ -165,14 +164,11 @@ class ExcelHandler(CsvHandler):
             sheet_name: 쉬트 이름.
             data: 내장 dataframe 대신 사용할 data. 기존 유틸리티의 호환성을 위해서 남김
         """
-        if 'text' == mode:
-            file_obj = io.StringIO()
-        elif 'binary' == mode:
-            file_obj = io.BytesIO()
+        file_obj = io.StringIO()
 
         try:
             self.dump(file_obj, sheet_name=sheet_name, data=data)
         except Exception as e:
-            logger.error(f"mode='{mode}' dumps raise {e}")
+            logger.error(f"{self} dumps raise: {e}")
 
         return file_obj.getvalue()

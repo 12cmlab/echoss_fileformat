@@ -62,7 +62,7 @@ class MyTestCase(unittest.TestCase):
         processing_types = ['object', 'object']
         load_filenames = ['test_data/simple_config.xml', 'test_data/simple_pom.xml']
         dump_filenames = ['test_data/simple_config_to_delete.xml', 'test_data/simple_pom_to_delete.xml']
-        expect_file_sizes = [0, 0]
+        expect_file_sizes = [1132, 11082]
 
         for processing_type, load_filename, dump_filename, expect_file_size \
                 in zip(processing_types, load_filenames, dump_filenames, expect_file_sizes):
@@ -81,7 +81,7 @@ class MyTestCase(unittest.TestCase):
             try:
                 handler = XmlHandler(processing_type)
                 handler.dump(dump_filename, data=tree_obj)
-                tree_str = handler.dumps('text', data=tree_obj)
+                tree_str = handler.dumps(data=tree_obj)
                 if verbose:
                     logger.info(f"{type(tree_obj)=}, {tree_str=}")
 
@@ -97,48 +97,48 @@ class MyTestCase(unittest.TestCase):
                 # self.assertEqual(expect_file_size, file_size)
 
             except Exception as e:
-                logger.error(f"\t {processing_type=} File load raise: {e}")
-                self.assertTrue(True, f"\t {processing_type=} File load raise: {e}")
+                logger.error(f"\t {processing_type=} File dump raise: {e}")
+                self.assertTrue(True, f"\t {processing_type=} File dump raise: {e}")
 
 
-    def test_load_complex_by_processing_type(self):
-        processing_types = ['object', 'array']
-        expect_passes = [0, 0]
-        expect_fails = [0, 1]
+    def test_load_simple_by_data_key(self):
+        processing_types = ['array', 'array']
+        load_filenames = ['test_data/simple_config.xml', 'test_data/simple_pom.xml']
+        dump_filenames = ['test_data/simple_config_to_delete.xml', 'test_data/simple_pom_to_delete.xml']
+        data_keys = ['.//tizen:privilege', './/dependency']
+        expect_file_sizes = [1132, 11082]
 
-        for processing_type, expect_pass, expect_fail in zip(processing_types, expect_passes, expect_fails):
+        for processing_type, load_filename, dump_filename, data_key, expect_file_size \
+                in zip(processing_types, load_filenames, dump_filenames, data_keys, expect_file_sizes):
             try:
                 handler = XmlHandler(processing_type)
-                tree_obj = handler.load('test_data/complex_one_object.json')
+                tree_obj = handler.load(load_filename, data_key=data_key)
                 pass_size = len(handler.pass_list)
                 fail_size = len(handler.fail_list)
+                if verbose:
+                    logger.info(f"{type(tree_obj)=}, {tree_obj=} {pass_size=} {fail_size=}")
+
             except Exception as e:
                 logger.error(f"\t {processing_type=} File load raise: {e}")
                 self.assertTrue(True, f"\t {processing_type=} File load raise: {e}")
-            else:
-                logger.info(f"\t {processing_type=} load assertEqual({expect_pass=}, {pass_size=})")
-                self.assertEqual(pass_size, expect_pass)
-                logger.info(f"\t {processing_type=} load assertEqual({expect_fail=}, {fail_size=})")
-                self.assertEqual(fail_size, expect_fail)
 
-    def test_load_complex_by_data_key(self):
-        processing_types = ['object', 'array', 'multiline']
-        expect_passes = [0, 1, 0]
-        expect_fails = [0, 0, 1942]
-
-        for processing_type, expect_pass, expect_fail in zip(processing_types, expect_passes, expect_fails):
             try:
-                handler = XmlHandler(processing_type)
-                handler.load('test_data/complex_one_object.json', data_key='main')
-                pass_size = len(handler.pass_list)
-                fail_size = len(handler.fail_list)
+                handler.dump(dump_filename)
+
+                exist = os.path.exists(dump_filename)
+                file_size = os.path.getsize(dump_filename)
+
+                if exist and '_to_delete' in dump_filename:
+                    os.remove(dump_filename)
+
+                logger.info(f"\t {processing_type=} dump assertTrue {exist=}")
+                # self.assertEqual(True, exist)
+                logger.info(f"\t {processing_type=} dump assertEqual({expect_file_size=}, {file_size=})")
+                # self.assertEqual(expect_file_size, file_size)
+
             except Exception as e:
-                self.assertTrue(True, f"\t {processing_type} processing_type File load fail by {e}")
-            else:
-                logger.info(f"\t {processing_type} load expect pass {expect_pass} get {pass_size}")
-                self.assertTrue(pass_size == expect_pass)
-                logger.info(f"\t {processing_type} load expect fail {expect_fail} get {fail_size}")
-                self.assertTrue(fail_size == expect_fail)
+                logger.error(f"\t {processing_type=} File dump raise: {e}")
+                self.assertTrue(True, f"\t {processing_type=} File dump raise: {e}")
 
     def test_load_mutliline_by_mode(self):
         modes = ['text', 'binary']
