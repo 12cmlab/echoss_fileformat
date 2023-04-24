@@ -14,6 +14,7 @@ class CsvHandler(FileformatBase):
     학습데이터로 CSV 파일은 전체 읽기를 기본으로 해서
     해더와 사용 컬럼 지정을 제공한다
     """
+    format = "csv"
 
     def __init__(self, processing_type='array', encoding='utf-8', error_log='error.log',
                  delimiter=',', quotechar='"', quoting=0, escapechar='\\'):
@@ -39,7 +40,7 @@ class CsvHandler(FileformatBase):
         self.escapechar = escapechar
 
     def load(self, file_or_filename: Union[io.TextIOWrapper, io.BytesIO, io.BufferedIOBase, str],
-             header=0, skiprows=0, nrows=None, usecols=None) -> Optional[pd.DataFrame]:
+             header=0, skiprows=0, nrows=None, usecols=None, **kwargs) -> Optional[pd.DataFrame]:
         """CSV 파일 읽기
 
             CSV 파일을 읽고 dataframe 으로 처리함
@@ -50,6 +51,7 @@ class CsvHandler(FileformatBase):
             skiprows (int) : 데이터를 읽기 위해서 스킵할 row 숫자 지정. (header 로 부터 스킵 숫자)
             nrows (int): skiprows 부터 N개의 데이터 row 건수만 읽을 경우 지정
             usecols (Union[int, list]): 전체 컬럼 사용시 None, 컬럼 번호나 이름의 리스트 [0, 1, 2] or ['foo', 'bar', 'baz']
+            **kwargs : 추가 키워드 옵션
         """
         try:
             # file_or_filename 객체가 지원되는 file-like object 또는 filename string 인지 검사
@@ -67,7 +69,8 @@ class CsvHandler(FileformatBase):
                 nrows=nrows,
                 usecols=usecols,
                 infer_datetime_format=True,
-                on_bad_lines='warn'
+                on_bad_lines='warn',
+                **kwargs
             )
 
             if self.processing_type == FileformatBase.TYPE_OBJECT:
@@ -173,7 +176,7 @@ class CsvHandler(FileformatBase):
         fp, binary_mode, opened = self._get_file_obj(file_or_filename, open_mode)
 
         try:
-            if not data:
+            if data is None:
                 df = self.to_pandas()
             else:
                 df = data

@@ -30,6 +30,8 @@ class FileformatBase:
 
     'object' 는 학습데이터가 아닌 메타 정보 파일에만 사용 권고. 처리 후에 내부 저장하지 않고 즉시 1개의 객체(구현마다 다름)로 리턴
     """
+    format = ""
+
     TYPE_ARRAY = 'array'
     TYPE_MULTILINE = 'multiline'
     TYPE_OBJECT = 'object'
@@ -49,7 +51,7 @@ class FileformatBase:
         self.fail_list = []
 
     def __str__(self):
-        return f"\{type: {self.type}, processing_type: {self.processing_type}, encoding: {self.encoding}\}"
+        return f"('format': {self.format}, 'processing_type': {self.processing_type}, 'encoding': {self.encoding})"
 
     def load(self, file_or_filename: Union[io.TextIOWrapper, io.BytesIO, str]) -> Optional[object]:
         """파일에서 데이터를 읽기
