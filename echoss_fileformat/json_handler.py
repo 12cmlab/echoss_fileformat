@@ -22,6 +22,7 @@ class JsonHandler(FileformatBase):
 
     'object' 는 학습데이터가 아닌 메타 정보 파일에만 사용 권고. 처리 후에 내부 저장하지 않고 즉시 1개의 dictionary object 로  리턴
     """
+    format = "json"
 
     def __init__(self, processing_type: Literal['array', 'multiline', 'object'] = 'array',
                  encoding='utf-8', error_log='error.log'):
@@ -171,7 +172,7 @@ class JsonHandler(FileformatBase):
 
         """
         if self.processing_type == FileformatBase.TYPE_OBJECT:
-            if not data:
+            if data is None:
                 raise TypeError(f"dump() method must have data parameter in {self.processing_type=}")
 
         fp = None
@@ -181,7 +182,7 @@ class JsonHandler(FileformatBase):
             open_mode = self._decide_rw_open_mode('dump')
             # file_or_filename 클래스 유형에 따라서 처리 방법이 다름
             fp, binary_mode, opened = self._get_file_obj(file_or_filename, open_mode)
-            if not data:
+            if data is None:
                 # dataframe 에 추가할 것 있으면 concat
                 data = self.to_pandas()
         except Exception as e:
@@ -291,7 +292,7 @@ class JsonHandler(FileformatBase):
             데이터를 문자열로 출력
         """
         if self.processing_type == FileformatBase.TYPE_OBJECT:
-            if not data:
+            if data is None:
                 raise TypeError(f"dumps() method must have data parameter if {self.processing_type=}")
         try:
             file_obj = io.BytesIO()

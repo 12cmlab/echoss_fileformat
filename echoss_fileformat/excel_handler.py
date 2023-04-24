@@ -16,6 +16,8 @@ class ExcelHandler(CsvHandler):
     학습데이터로 Excel 파일은 전체 읽기를 기본으로 해서
     해더와 사용 컬럼 지정을 제공한다
     """
+    format = "xlsx"
+
     def __init__(self, processing_type: Literal['array', 'object'] = 'array', encoding='utf-8', error_log='error.log'):
         """Excel 파일 핸들러 초기화
 

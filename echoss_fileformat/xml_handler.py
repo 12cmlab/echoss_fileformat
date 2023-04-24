@@ -22,6 +22,7 @@ class XmlHandler(FileformatBase):
 
     'object' 는 학습 데이터가 아니라 메타 정보를 읽기 위해서 사용. dataframe 으로 바꾸지 않고 그대로 사욤
     """
+    format = "xml"
 
     def __init__(self, processing_type: Literal['array', 'object'] = 'array',
                  encoding='utf-8', error_log='error.log'):
@@ -96,7 +97,7 @@ class XmlHandler(FileformatBase):
         # 즉, <temperature>17.6</temperature> 형태를 'temperature': 17.6 으로 처리함
         try:
             # data_key 과 usecols 확인
-            if not data_key:
+            if data_key is None:
                 data_nodes = root
             else:
                 # self.child_tag = data_key.split('/')[-1]
