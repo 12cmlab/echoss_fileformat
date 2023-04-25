@@ -4,6 +4,7 @@ import logging
 import os
 
 from echoss_fileformat.json_handler import JsonHandler
+from echoss_fileformat.feather_handler import FeatherHandler
 
 # configure the logger
 LOG_FORMAT = "%(asctime)s %(name)s %(levelname)s - %(message)s"
@@ -115,6 +116,13 @@ class MyTestCase(unittest.TestCase):
                 self.assertTrue(pass_size == expect_pass)
                 logger.info(f"\t {processing_type} load expect fail {expect_fail} get {fail_size}")
                 self.assertTrue(fail_size == expect_fail)
+
+            # 임시 코드로 feather 저장
+            if processing_type == 'multiline':
+                df = handler.to_pandas()
+                feather_handler = FeatherHandler()
+                feather_handler.dump('test_data/simple_object.feather', df)
+
 
     """
     dump

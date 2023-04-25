@@ -6,7 +6,7 @@ import os
 from echoss_fileformat.csv_handler import CsvHandler
 from echoss_fileformat.feather_handler import FeatherHandler
 
-from dataframe_util import print_table, print_dataframe, print_taburate
+from dataframe_print import print_table, print_dataframe, print_taburate
 
 # configure the logger
 LOG_FORMAT = "%(asctime)s %(name)s %(levelname)s - %(message)s"
@@ -73,8 +73,8 @@ class MyTestCase(unittest.TestCase):
             self.assertTrue(fail_size == expect_fail)
 
     def test_load_feather(self):
-        load_filename = 'test_data/sin_kun_daeri.feather'
-        dump_filename = 'test_data/sin_kun_daeri_to_delete.feather'
+        load_filename = 'test_data/simple_object.feather'
+        dump_filename = 'test_data/simple_object_to_delete.feather'
 
         expect_pass = 1
         expect_fail = 0
