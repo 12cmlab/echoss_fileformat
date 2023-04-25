@@ -7,7 +7,7 @@ import pandas as pd
 import xlsxwriter
 
 from echoss_fileformat.excel_handler import ExcelHandler
-from dataframe_print import print_dataframe, print_table, print_taburate
+from dataframe_print import print_table
 
 
 # configure the logger

@@ -4,7 +4,7 @@ import logging
 import os
 
 from echoss_fileformat.csv_handler import CsvHandler
-from dataframe_print import print_table, print_dataframe, print_taburate
+from dataframe_print import print_table
 
 # configure the logger
 LOG_FORMAT = "%(asctime)s %(name)s %(levelname)s - %(message)s"

@@ -6,7 +6,7 @@ import os
 from echoss_fileformat.csv_handler import CsvHandler
 from echoss_fileformat.feather_handler import FeatherHandler
 
-from dataframe_print import print_table, print_dataframe, print_taburate
+from dataframe_print import print_table
 
 # configure the logger
 LOG_FORMAT = "%(asctime)s %(name)s %(levelname)s - %(message)s"
