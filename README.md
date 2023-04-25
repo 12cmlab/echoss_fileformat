@@ -1,4 +1,4 @@
-# echoss_fileformat v1.0
+# echoss_fileformat v0.1
 
 # File Format Handlers
 
@@ -52,7 +52,7 @@ json_handler.dump( 'test_data_all.json')
 Contributions are welcome! If you find a bug or want to suggest a new feature, please open an issue on the GitHub repository.
 
 ## License
-This project is licensed under the MIT License. See the LICENSE file for more information.
+This project is licensed under the LGPL License. See the LICENSE file for more information.
 
 ## Credits
 This project was created by 12cm. Special thanks to 12cm R&D for their contributions to the project.

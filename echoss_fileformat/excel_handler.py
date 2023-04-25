@@ -1,8 +1,7 @@
 import io
 import logging
 import pandas as pd
-import xlsxwriter
-# import openpyxl   # to_excel() 에서 사용하므로 설치는 되어야함
+import openpyxl   # to_excel() 에서 사용하므로 설치는 되어야함
 from typing import Literal, Optional, Union
 
 from .csv_handler import CsvHandler
@@ -29,9 +28,9 @@ class ExcelHandler(CsvHandler):
             error_log: 에러 발생 시에 저장되는 파일 'error.log' 기본값
         """
         super().__init__(processing_type=processing_type, encoding=encoding, error_log=error_log)
-        # self.engine = 'openpyxl'
+        # self.engine = 'openpyxl' , 멀티헤더 처리 이슈로 분리해서 테스트 후 효과가 없었음
         self.read_engine = 'openpyxl'
-        self.write_engine = 'xlsxwriter'
+        self.write_engine = 'openpyxl'
 
     def load(self, file_or_filename: Union[io.TextIOWrapper, io.BytesIO, io.BufferedIOBase, str],
              sheet_name=0, skiprows=0, header=0, nrows=None, usecols=None) -> Optional[pd.DataFrame]:
@@ -72,7 +71,7 @@ class ExcelHandler(CsvHandler):
                 return df
         except Exception as e:
             self.fail_list.append(str(file_or_filename))
-            logger.error(f"{file_or_filename} '{mode}' load raise {e}")
+            logger.error(f"{file_or_filename} load raise {e}")
             if self.processing_type == CsvHandler.TYPE_OBJECT:
                 return None
 
