@@ -2,11 +2,12 @@
     echoss AI Bigdata Center Solution - file format utilty
 """
 import io
-import logging
 import pandas as pd
 from typing import Literal, Optional, Tuple, Union
 
-logger = logging.getLogger(__name__)
+from echoss_fileformat.echoss_logger import get_logger
+
+logger = get_logger("echoss_fileformat")
 
 
 class FileformatBase:
@@ -23,18 +24,22 @@ class FileformatBase:
 
     학습데이터로는 processing_type 'array' 와 'multiline' 만 사용 권고
 
-    'array' 는 전체 객체가 array 형태로 list of dictionary 로 누적 처리
+    'array' : use read_array() or write_array()  instead of load/dump
+    - 'array' 는 전체 객체가 array 형태로 list of dictionary 로 누적 처리
     'multiline' JSON 파일에서만 사용. 파일의 각 줄을 하나의 JSON object(dict) 형태로  읽어서 누적 처리
+    - use ".json" extension for normal json object, use ".jsonl" for json line format
 
     특정 키만 학습데이터로 사용할 경우에는 자식클래스 구현마다 다름. data_key 또는 usecols 사용
 
-    'object' 는 학습데이터가 아닌 메타 정보 파일에만 사용 권고. 처리 후에 내부 저장하지 않고 즉시 1개의 객체(구현마다 다름)로 리턴
+    'object' 는  load/dump or to_dataframe/from_dataframe
+
     """
     format = ""
 
     TYPE_ARRAY = 'array'
     TYPE_MULTILINE = 'multiline'
     TYPE_OBJECT = 'object'
+
 
     def __init__(self, processing_type='array', encoding='utf-8', error_log='error.log'):
         """       
@@ -182,3 +187,10 @@ class FileformatBase:
         else:
             raise TypeError(f"{file_or_filename} is not file obj")
         return fp, binary_mode, opened
+
+    def _safe_close(self, fp, opened):
+        if opened and fp:
+            if hasattr(fp, 'close') and callable(getattr(fp, 'close')):
+                fp.close()
+
+

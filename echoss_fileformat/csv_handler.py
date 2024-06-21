@@ -40,7 +40,7 @@ class CsvHandler(FileformatBase):
         self.escapechar = escapechar
 
     def load(self, file_or_filename: Union[io.TextIOWrapper, io.BytesIO, io.BufferedIOBase, str],
-             header=0, skiprows=0, nrows=None, usecols=None, **kwargs) -> Optional[pd.DataFrame]:
+             header: Union[int, list] = 0, skiprows: int = 0, nrows: int = None, usecols=None, **kwargs) -> Optional[pd.DataFrame]:
         """CSV 파일 읽기
 
             CSV 파일을 읽고 dataframe 으로 처리함
@@ -161,16 +161,14 @@ class CsvHandler(FileformatBase):
                 self.fail_list.clear()
         return self.data_df
 
-    def dump(self, file_or_filename, data: pd.DataFrame = None):
+    def dump(self, file_or_filename, data: pd.DataFrame = None, **kwargs):
         """데이터를 CSV 파일로 쓰기
 
         파일은 text, binary 모드 파일객체이거나 파일명 문자열
         Args:
             file_or_filename (file, str): 파일객체 또는 파일명
-
-            quoting (int): 인용문자 사용 빈도에 대한 정책 0: QUOTE_MINIMAL, 1: QUOTE_ALL, 2: QUOTE_NONNUMERIC, 3: QUOTE_NONE
-
             data: dataframe 으로 설정시 사용. 기존 유틸리티의 호환성을 위해서 남김
+            kwargs : optional key value args
         """
         open_mode = self._decide_rw_open_mode('dump')
         fp, binary_mode, opened = self._get_file_obj(file_or_filename, open_mode)

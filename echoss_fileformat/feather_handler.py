@@ -21,7 +21,7 @@ class FeatherHandler(FileformatBase):
     """
     format = "feather"
 
-    def __init__(self, processing_type: Literal['array', 'object'] = 'object',
+    def __init__(self, processing_type: str = 'object',
                  encoding='utf-8', error_log='error.log'):
         """Initialize feather file format
 
@@ -30,7 +30,7 @@ class FeatherHandler(FileformatBase):
         """
         super().__init__(processing_type = processing_type, encoding=encoding, error_log=error_log)
 
-    def load(self, file_or_filename: Union[io.TextIOWrapper, io.BytesIO, str]) -> Optional[pd.DataFrame]:
+    def load(self, file_or_filename: Union[io.TextIOWrapper, io.BytesIO, str], **kwargs) -> Optional[pd.DataFrame]:
         """파일 객체나 파일명에서 feather 데이터 읽기
 
         Args:
@@ -45,14 +45,13 @@ class FeatherHandler(FileformatBase):
         fp, binary_mode, opened = self._get_file_obj(file_or_filename, open_mode)
 
         try:
-            read_df = feather.read_feather(fp)
+            read_df = feather.read_feather(fp, **kwargs)
         except Exception as e:
             self.fail_list.append(str(fp))
             logger.error(f"{fp=}, {binary_mode=}, {opened=}, {self.processing_type=} load raise: {e}")
 
         # close opened file if filename
-        if opened and fp:
-            fp.close()
+        self._safe_close(fp, opened)
 
         if self.processing_type == FileformatBase.TYPE_OBJECT:
             return read_df
@@ -138,14 +137,14 @@ class FeatherHandler(FileformatBase):
                 self.fail_list.clear()
         return self.data_df
 
-    def dump(self, file_or_filename: Union[io.TextIOWrapper, io.BytesIO, str], data=None) -> None:
+    def dump(self, file_or_filename: Union[io.TextIOWrapper, io.BytesIO, str], data=None, **kwargs) -> None:
         """데이터를 feather 파일로 쓰기
 
         파일은 text, binary 모드 파일객체이거나 파일명 문자열
         Args:
             file_or_filename (file, str): 파일객체 또는 파일명, text 모드는 TextIOWrapper, binary 모드는 BytesIO 사용
             data: use this data instead of self.data_df if provide 기능 확장성과 호환성을 위해서 남김
-            data_key (str): if empty use whole file, else use only key value. for example 'data'
+            kwargs : if empty use whole file, else use only key value. for example 'data'
 
         """
         if self.processing_type == FileformatBase.TYPE_OBJECT:
@@ -173,8 +172,7 @@ class FeatherHandler(FileformatBase):
             self.fail_list.append(data)
             logger.error(f"{fp=}, {binary_mode=}, {opened=}, '{self.processing_type}' dump raise: {e}")
 
-        if opened and fp:
-            fp.close()
+        self._safe_close(fp, opened)
 
     def dumps(self, data=None ) -> str:
         """feather 데이터를 문자열 또는 바이너리 형태로 출력

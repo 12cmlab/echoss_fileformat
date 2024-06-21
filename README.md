@@ -1,16 +1,27 @@
-# echoss_fileformat v1.0
+# echoss_fileformat v1.1
 
 # File Format Handlers
 
 This project provides file format handler packages for JSON, CSV, XML, and Excel files. The packages provide an abstraction layer to load and save data in these file formats using a unified API.
+
+## Version History
+- v1.0 : Object method
+- v1.1 : static method 
 
 ## Installation
 
 To install the package, use pip:
 pip install echoss_fileformat
 
+To upgrade the installed package, use pip:
+pip install echoss_fileformat -U
+
 ## Usage
 
+1. static call 
+
+
+2. Object 
 - 학습데이터가 아닌 메타데이터 객체로 읽어들일 경우
 
 handler = CsvHandler('object')

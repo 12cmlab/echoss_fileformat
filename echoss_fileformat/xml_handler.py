@@ -24,7 +24,7 @@ class XmlHandler(FileformatBase):
     """
     format = "xml"
 
-    def __init__(self, processing_type: Literal['array', 'object'] = 'array',
+    def __init__(self, processing_type: str = 'array',
                  encoding='utf-8', error_log='error.log'):
         """Initialize XML file format
 
@@ -308,8 +308,7 @@ class XmlHandler(FileformatBase):
             self.fail_list.append(data)
             logger.error(f"{fp=}, {binary_mode=}, {opened=}, {self.processing_type=} dump raise: {e}")
         finally:
-            if opened and fp is not None:
-                fp.close()
+            self._safe_close(fp, opened)
 
     def dumps(self, data=None, root_tag=None, child_tag=None) -> str:
         """XML 데이터를 형태로 출력

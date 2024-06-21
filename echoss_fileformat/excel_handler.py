@@ -1,8 +1,8 @@
 import io
 import logging
 import pandas as pd
-import xlsxwriter
-# import openpyxl   # to_excel() 에서 사용하므로 설치는 되어야함
+# import openpyxl  # to_excel() 에서 사용하므로 설치는 되어야함
+
 from typing import Literal, Optional, Union
 
 from .csv_handler import CsvHandler
@@ -18,7 +18,7 @@ class ExcelHandler(CsvHandler):
     """
     format = "xlsx"
 
-    def __init__(self, processing_type: Literal['array', 'object'] = 'array', encoding='utf-8', error_log='error.log'):
+    def __init__(self, processing_type: str = 'array', encoding='utf-8', error_log='error.log'):
         """Excel 파일 핸들러 초기화
 
         Args:
@@ -31,7 +31,7 @@ class ExcelHandler(CsvHandler):
         super().__init__(processing_type=processing_type, encoding=encoding, error_log=error_log)
         # self.engine = 'openpyxl'
         self.read_engine = 'openpyxl'
-        self.write_engine = 'xlsxwriter'
+        self.write_engine = 'openpyxl'
 
     def load(self, file_or_filename: Union[io.TextIOWrapper, io.BytesIO, io.BufferedIOBase, str],
              sheet_name=0, skiprows=0, header=0, nrows=None, usecols=None) -> Optional[pd.DataFrame]:
@@ -142,17 +142,16 @@ class ExcelHandler(CsvHandler):
             # elif self.processing_type == CsvHandler.TYPE_OBJECT:
             #    use_index = True
 
-            # # multi-header 문제떄문에 ExcelWriter 버전으로 대체. 효과는 없었엄. index=True 로 dump하고 후처리 방식으로 변경
-            # df.to_excel(
-            #     file_or_filename,
-            #     sheet_name=sheet_name,
-            #     index=False,
-            #     engine=self.engine
-            # )
+            # multi-header 문제떄문에 ExcelWriter 버전으로 대체. 효과는 없었엄. index=True 로 dump하고 후처리 방식으로 변경
+            df.to_excel(
+                file_or_filename,
+                sheet_name=sheet_name,
+                index=use_index
+            )
 
             # write to Excel file
-            with pd.ExcelWriter(file_or_filename, engine=self.write_engine) as writer:
-                df.to_excel(writer, sheet_name=sheet_name, index=use_index)
+            # with pd.ExcelWriter(file_or_filename, engine=self.write_engine) as writer:
+            #     df.to_excel(writer, sheet_name=sheet_name, index=use_index)
 
         except Exception as e:
             logger.error(f"'{str(file_or_filename)}' dump raise {e}")

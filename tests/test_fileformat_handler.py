@@ -77,9 +77,9 @@ class FileformatHandlerTestCase(unittest.TestCase):
         # not exist Directory and 'r'
         open_modes = ['r', 'w', 'rb', 'wb']
         filenames = [
-            'test_data/simple_multiline_object.json',
+            'test_data/simple_multiline_object.jsonl',
             'test_data/simple_multiline_object_to_delete.json',
-            'test_data/simple_multiline_object.json',
+            'test_data/simple_multiline_object.jsonl',
             'test_data/simple_multiline_object_to_delete.json',
         ]
 
@@ -121,9 +121,9 @@ class FileformatHandlerTestCase(unittest.TestCase):
         # not exist Directory and 'r'
         open_modes = ['r', 'w', 'rb', 'wb']
         filenames = [
-            'test_data/simple_multiline_object.json',
+            'test_data/simple_multiline_object.jsonl',
             'test_data/simple_multiline_object_to_delete.json',
-            'test_data/simple_multiline_object.json',
+            'test_data/simple_multiline_object.jsonl',
             'test_data/simple_multiline_object_to_delete.json',
         ]
         expect_instances = [

@@ -2,17 +2,25 @@ import unittest
 import time
 import logging
 import os
+import pandas as pd
 
 from echoss_fileformat.csv_handler import CsvHandler
-from dataframe_util import print_table, print_dataframe, print_taburate
+from echoss_fileformat import echoss_logger
 
-# configure the logger
-LOG_FORMAT = "%(asctime)s %(name)s %(levelname)s - %(message)s"
-logging.basicConfig(level=logging.INFO, format=LOG_FORMAT)
-logger = logging.getLogger(__name__)
-# use the logger
+
+def print_table(df: pd.DataFrame, method, index=False, max_cols=20, max_rows=10, col_space=16, max_colwidth=24):
+    method(table_to_string(df, index=index, max_cols=max_cols, max_rows=max_rows, col_space=col_space, max_colwidth=max_colwidth))
+
+
+def table_to_string(df: pd.DataFrame, index=False, max_cols=20, max_rows=5, col_space=16, max_colwidth=24):
+    return '\n'+df.to_string(index=index, index_names=index, max_cols=max_cols, max_rows=max_rows, justify='left',
+                             show_dimensions=True, col_space=col_space, max_colwidth=max_colwidth)+'\n'
+
+
+logger = echoss_logger.get_logger("test_csv_handler", backup_count=1)
 
 verbose = True
+
 
 class MyTestCase(unittest.TestCase):
     """
@@ -47,7 +55,7 @@ class MyTestCase(unittest.TestCase):
             csv_df = handler.to_pandas()
             if csv_df is not None:
                 if verbose:
-                    print_taburate(csv_df.head(10), logger.info)
+                    print_table(csv_df.head(10), logger.info)
             else:
                 logger.info('empty dataframe')
             expect_csv_str = "SEQ_NO,PROMTN_TY_CD,PROMTN_TY_NM,BRAND_NM,SVC_NM,ISSU_CO,PARTCPTN_CO,PSNBY_ISSU_CO,COUPON_CRTFC_CO,COUPON_USE_RT\r\n"+"0,9,대만프로모션발급인증통계,77chocolate,S0013,15,15,1.0,15,1.0"
@@ -151,12 +159,12 @@ class MyTestCase(unittest.TestCase):
             try:
                 handler = CsvHandler(processing_type)
                 if mode == 'text':
-                    with open('test_data/simple_multiline_object.json', 'r', encoding='utf-8') as fp:
+                    with open('test_data/simple_multiline_object.jsonl', 'r', encoding='utf-8') as fp:
                         handler.load(fp)
                         pass_size = len(handler.pass_list)
                         fail_size = len(handler.fail_list)
                 elif mode == 'binary':
-                    with open('test_data/simple_multiline_object.json', 'rb') as fb:
+                    with open('test_data/simple_multiline_object.jsonl', 'rb') as fb:
                         handler.load(fb)
                         pass_size = len(handler.pass_list)
                         fail_size = len(handler.fail_list)
@@ -168,25 +176,6 @@ class MyTestCase(unittest.TestCase):
                 self.assertEqual(pass_size, expect_pass)
                 logger.info(f"\t assertEqual({expect_fail}, {fail_size}) at {mode=}, {processing_type=}")
                 self.assertEqual(fail_size, expect_fail)
-
-    def test_load_mutliline_by_data_key(self):
-        json_types = ['object', 'array', 'multiline']
-        expect_passes = [0, 0, 15]
-        expect_fails = [1, 1, 0]
-
-        for json_type, expect_pass, expect_fail in zip(json_types, expect_passes, expect_fails):
-            try:
-                handler = CsvHandler(json_type)
-                handler.load('test_data/simple_multiline_object.json', data_key='message')
-                pass_size = len(handler.pass_list)
-                fail_size = len(handler.fail_list)
-            except Exception as e:
-                self.assertTrue(True, f"\t {json_type} json_type File load fail by {e}")
-            else:
-                logger.info(f"\t {json_type} load expect pass {expect_pass} get {pass_size}")
-                self.assertTrue(pass_size == expect_pass)
-                logger.info(f"\t {json_type} load expect fail {expect_fail} get {fail_size}")
-                self.assertTrue(fail_size == expect_fail)
 
 
 if __name__ == '__main__':

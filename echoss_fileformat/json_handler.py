@@ -1,12 +1,12 @@
 import io
 import json
-import logging
 import pandas as pd
 from typing import Dict, Literal, Optional, Union
 
 from .fileformat_base import FileformatBase
+from echoss_fileformat.echoss_logger import get_logger
 
-logger = logging.getLogger(__name__)
+logger = get_logger("echoss_fileformat")
 
 
 class JsonHandler(FileformatBase):
@@ -24,7 +24,7 @@ class JsonHandler(FileformatBase):
     """
     format = "json"
 
-    def __init__(self, processing_type: Literal['array', 'multiline', 'object'] = 'array',
+    def __init__(self, processing_type: str = 'array',
                  encoding='utf-8', error_log='error.log'):
         """Initialize json file format
 
@@ -176,7 +176,7 @@ class JsonHandler(FileformatBase):
                 raise TypeError(f"dump() method must have data parameter in {self.processing_type=}")
 
         fp = None
-        mode = ''
+        binary_mode = ''
         opened = False
         try:
             open_mode = self._decide_rw_open_mode('dump')
@@ -186,8 +186,8 @@ class JsonHandler(FileformatBase):
                 # dataframe 에 추가할 것 있으면 concat
                 data = self.to_pandas()
         except Exception as e:
-            self.fail_list.append(data)
             logger.error(f"{fp=}, {binary_mode=}, {opened=}, '{self.processing_type}' dump raise: {e}")
+            return e
 
         # json_type 구분
         if self.processing_type == FileformatBase.TYPE_ARRAY:
@@ -209,8 +209,11 @@ class JsonHandler(FileformatBase):
                 else:
                     json.dump(json_list, fp)
             except Exception as e:
-                self.fail_list.append(data)
-                logger.error(f"{fp=}, {binary_mode=}, {opened=}, '{self.processing_type}' dump raise: {e}")
+                if "object" == self.processing_type:
+                    return e
+                else:
+                    self.fail_list.append(data)
+                    logger.error(f"{fp=}, {binary_mode=}, {opened=}, '{self.processing_type}' dump raise: {e}")
 
         # 'multiline' 유형에서는 강제로 binary 모드를 사용한다
         elif self.processing_type == FileformatBase.TYPE_MULTILINE:
@@ -276,8 +279,7 @@ class JsonHandler(FileformatBase):
                 self.fail_list.append(data)
                 logger.error(f"{fp=}, {binary_mode=}, {opened=}, {self.processing_type=} dump raise: {e}")
 
-        if opened and fp:
-            fp.close()
+        self._safe_close(fp, opened)
 
     def dumps(self, data=None, data_key='') -> str:
         """JSON 데이터를 문자열 또는 바이너리 형태로 출력
