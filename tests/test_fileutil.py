@@ -1,10 +1,10 @@
-import io
+# import io
 import unittest
 import os
 import time
 import pandas as pd
 
-from echoss_fileformat import FileUtil, PandasUtil, get_logger, set_logger_level
+from echoss_fileformat import FileUtil, PandasUtil, get_logger
 
 logger = get_logger("test_fileutil", backup_count=1)
 
@@ -29,29 +29,27 @@ class FileUtilTestCase(unittest.TestCase):
     def test_get_file_obj_not_exist(self):
         # not exist Directory and 'r'
         filename = 'test_data_wrong/complex_one.json'
-        open_mode = 'r'
         with self.assertRaises(FileNotFoundError) as context:
             fail_df = FileUtil.load(filename)
+            logger.info(f"{fail_df=}")
 
         self.assertTrue(filename in str(context.exception))
 
         # not exist Directory and 'w'
         save_df = pd.DataFrame()
         filename = 'test_data_wrong/complex_one.json'
-        open_mode = 'w'
         FileUtil.dump(save_df, filename)
 
         # exist Directory and 'r
         filename = 'test_data/complex_one_not_exist.json'
-        open_mode = 'r'
         with self.assertRaises(FileNotFoundError) as context:
             fail_df = FileUtil.load(filename)
+            logger.info(f"{fail_df=}")
 
         self.assertTrue(filename in str(context.exception))
 
         # exist Directory and 'w'
         filename = 'test_data/complex_one_not_exist_to_delete.json'
-        open_mode = 'w'
         try:
             FileUtil.dump(save_df, filename)
         except Exception as e:
@@ -75,16 +73,16 @@ class FileUtilTestCase(unittest.TestCase):
                 try:
                     read_df = FileUtil.load(filename, data_key="message")
                 except Exception as e:
-                    logger.error (f"load error : {e}")
+                    logger.error(f"load error : {e}")
 
             elif open_mode in ['w', 'wb']:
                 try:
                     FileUtil.dump(read_df, filename)
                 except Exception as e:
-                    logger.error (f"load error : {e}")
+                    logger.error(f"load error : {e}")
 
             if open_mode in ['r']:
-                PandasUtil.set_markers(vertical='#', horizontal='=', corner='*')
+                # PandasUtil.set_markers(vertical='#', horizontal='=', corner='*')
                 logger.info(f"read_df = {PandasUtil.to_table(read_df, max_cols=8)}")
 
                 logger.info(f"assertEqual({len(line_list)}, 15)")

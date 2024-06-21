@@ -2,7 +2,6 @@
     echoss AI Bigdata Center Solution - file format utilty (static version)
 """
 import os
-
 import pandas as pd
 import wcwidth
 
@@ -185,72 +184,99 @@ class FileUtil:
 class PandasUtil:
     """ pandas dataframe utility
     """
-    vert_marker = '|'
-    horiz_marker = '-'
-    corner_marker = '+'
+    v_marker = '|'
+    h_marker = '-'
+    c_marker = '+'
 
     @staticmethod
     def set_markers(vertical='|', horizontal='-', corner='+'):
-        PandasUtil.vert_marker = vertical
-        PandasUtil.horiz_marker = horizontal
-        PandasUtil.corner_marker = corner
-
-    @staticmethod
-    def calculate_display_width(text):
-        return sum(wcwidth.wcwidth(char) for char in text)
+        PandasUtil.v_marker = vertical
+        PandasUtil.h_marker = horizontal
+        PandasUtil.c_marker = corner
 
     @staticmethod
     def adjust_width(s, width):
-        display_width = PandasUtil.calculate_display_width(s)
+        display_width = wcwidth.wcswidth(s)
         if display_width <= width:
             return s + ' ' * (width - display_width)
-        return s[:width-3] + '...'
+
+        for i in range(width//2-3, len(s)):
+            current_width = wcwidth.wcswidth(s[:i])
+            if current_width > width - 3:
+                remaining_width = width - current_width
+                return s[:i] + '.' * remaining_width
+
+        return s[:width - 3] + '...'
+
+    @staticmethod
+    def preprocess_dataframe(df):
+        # 특수 문자를 \\n 등으로 변환
+        def clean_text(text):
+            if isinstance(text, str):
+                text = text.replace('\r\n', '\\n').replace('\r', '\\n').replace('\n', '\\n')
+                text = text.replace('\t', '\\t').replace('\x0b', ' ').replace('\x0c', ' ')
+                text = text.replace('\u200b', '')
+            return text
+        df = df.applymap(clean_text)
+        return df
 
     @staticmethod
     def split_columns(df, max_cols):
         if len(df.columns) > max_cols:
             part1 = df.iloc[:, :max_cols // 2]
             part2 = df.iloc[:, -max_cols // 2:]
-            ellipsis = pd.DataFrame({i: ['...'] * len(df) for i in range(1)}, columns=['...'])
-            df = pd.concat([part1, ellipsis, part2], axis=1)
+            mid = pd.DataFrame({'...': ['...'] * len(df)}, index=df.index)
+            df = pd.concat([part1, mid, part2], axis=1)
         return df
 
     @staticmethod
     def split_rows(df, max_rows):
         if len(df) > max_rows:
-            top_part = df.iloc[:max_rows // 2]
-            bottom_part = df.iloc[-max_rows // 2:]
-            middle_row = pd.DataFrame({col: ['...'] for col in df.columns})
+            half_max_rows = max_rows // 2
+            top_part = df.iloc[:half_max_rows]
+            bottom_part = df.iloc[-half_max_rows:]
+            middle_row = pd.DataFrame({col: ['...'] for col in df.columns}, index=[half_max_rows])
             middle_row.columns = df.columns
             df = pd.concat([top_part, middle_row, bottom_part])
         return df
 
     @staticmethod
-    def to_table(df: pd.DataFrame, index=False, max_cols=20, max_rows=10, col_space=16, max_colwidth=24):
+    def to_table(df: pd.DataFrame, index=False, max_cols=20, max_rows=10, col_space=16, max_colwidth=28):
         df = PandasUtil.split_rows(df, max_rows)
         df = PandasUtil.split_columns(df, max_cols)
+        df = PandasUtil.preprocess_dataframe(df)
 
         # Calculate the widths for each column
         col_widths = {}
         for col in df.columns:
-            max_data_width = df[col].astype(str).apply(PandasUtil.calculate_display_width).max()
-            col_widths[col] = min(max(max_data_width, PandasUtil.calculate_display_width(col)), max_colwidth)
+            max_data_width = df[col].astype(str).apply(wcwidth.wcswidth).max()
+            col_widths[col] = min(max(max_data_width, wcwidth.wcswidth(col)), max_colwidth)
             col_widths[col] = max(col_widths[col], col_space)
+
+        # Calculate the widths for each column
+        col_widths = {
+            col: min(max(df[col].astype(str).apply(wcwidth.wcswidth).max(), wcwidth.wcswidth(col)), max_colwidth)
+            for col in df.columns
+        }
+        col_widths = {col: max(width, col_space) for col, width in col_widths.items()}
 
         # Create the table header
         header = [PandasUtil.adjust_width(col, col_widths[col]) for col in df.columns]
-        header_line = f' {PandasUtil.vert_marker} '.join(header)
-        border_line = PandasUtil.corner_marker + PandasUtil.corner_marker.join([PandasUtil.horiz_marker * (col_widths[col] + 2) for col in df.columns]) + PandasUtil.corner_marker
+        header_line = f' {PandasUtil.v_marker} '.join(header)
+        border_line = PandasUtil.c_marker + PandasUtil.c_marker.join(
+            [PandasUtil.h_marker * (col_widths[col] + 2) for col in df.columns]) + PandasUtil.c_marker
 
         # Create the formatted table
-        lines = [border_line, f'{PandasUtil.vert_marker} ' + header_line + f' {PandasUtil.vert_marker}', border_line]
+        lines = [border_line, f'{PandasUtil.v_marker} ' + header_line + f' {PandasUtil.v_marker}', border_line]
 
         # Create table rows
         for i in range(len(df)):
-            row = [PandasUtil.adjust_width(str(df.iloc[i, j]), col_widths[df.columns[j]]) for j in range(len(df.columns))]
-            row_line = f' {PandasUtil.vert_marker} '.join(row)
-            lines.append(f'{PandasUtil.vert_marker} ' + row_line + f' {PandasUtil.vert_marker}')
+            row = [PandasUtil.adjust_width(str(df.iloc[i, j]), col_widths[df.columns[j]]) for j in
+                   range(len(df.columns))]
+            row_line = f' {PandasUtil.v_marker} '.join(row)
+            lines.append(f'{PandasUtil.v_marker} ' + row_line + f' {PandasUtil.v_marker}')
             lines.append(border_line)
 
         return '\n' + '\n'.join(lines) + '\n'
+
 
