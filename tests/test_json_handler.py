@@ -4,12 +4,9 @@ import logging
 import os
 
 from echoss_fileformat.json_handler import JsonHandler
+from echoss_fileformat import echoss_logger
 
-# configure the logger
-LOG_FORMAT = "%(asctime)s %(name)s %(levelname)s - %(message)s"
-logging.basicConfig(level=logging.INFO, format=LOG_FORMAT)
-logger = logging.getLogger(__name__)
-# use the logger
+logger = echoss_logger.get_logger(logger_name='test_json_handler', backup_count=1)
 
 
 class MyTestCase(unittest.TestCase):
@@ -80,12 +77,12 @@ class MyTestCase(unittest.TestCase):
             try:
                 handler = JsonHandler('multiline')
                 if mode == 'text':
-                    with open('test_data/simple_multiline_object.json', 'r', encoding='utf-8') as fp:
+                    with open('test_data/simple_multiline_object.jsonl', 'r', encoding='utf-8') as fp:
                         handler.load(fp)
                         pass_size = len(handler.pass_list)
                         fail_size = len(handler.fail_list)
                 elif mode == 'binary':
-                    with open('test_data/simple_multiline_object.json', 'rb') as fb:
+                    with open('test_data/simple_multiline_object.jsonl', 'rb') as fb:
                         handler.load(fb)
                         pass_size = len(handler.pass_list)
                         fail_size = len(handler.fail_list)
@@ -105,7 +102,7 @@ class MyTestCase(unittest.TestCase):
         for processing_type, expect_pass, expect_fail in zip(processing_types, expect_passes, expect_fails):
             try:
                 handler = JsonHandler(processing_type)
-                handler.load('test_data/simple_multiline_object.json', data_key='message')
+                handler.load('test_data/simple_multiline_object.jsonl', data_key='message')
                 pass_size = len(handler.pass_list)
                 fail_size = len(handler.fail_list)
             except Exception as e:
@@ -157,7 +154,7 @@ class MyTestCase(unittest.TestCase):
         expect_file_sizes = [13413, 13413]
 
         json_type = JsonHandler.TYPE_MULTILINE
-        load_filename = 'test_data/simple_multiline_object.json'
+        load_filename = 'test_data/simple_multiline_object.jsonl'
 
         for mode, expect_file_size in zip(modes, expect_file_sizes):
             try:
@@ -200,7 +197,7 @@ class MyTestCase(unittest.TestCase):
         expect_file_sizes = [10513, 10513]
 
         json_type = JsonHandler.TYPE_MULTILINE
-        load_filename = 'test_data/simple_multiline_object.json'
+        load_filename = 'test_data/simple_multiline_object.jsonl'
 
         for mode, data_key, expect_file_size in zip(modes, data_keys, expect_file_sizes):
             try:

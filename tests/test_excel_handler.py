@@ -4,17 +4,21 @@ import logging
 import os
 import sys
 import pandas as pd
-import xlsxwriter
 
 from echoss_fileformat.excel_handler import ExcelHandler
-from dataframe_util import print_dataframe, print_table, print_taburate
+from echoss_fileformat.echoss_logger import get_logger
 
 
-# configure the logger
-LOG_FORMAT = "%(asctime)s %(name)s %(levelname)s - %(message)s"
-logging.basicConfig(level=logging.INFO, format=LOG_FORMAT)
-logger = logging.getLogger(__name__)
+def print_table(df: pd.DataFrame, method, index=False, max_cols=20, max_rows=10, col_space=16, max_colwidth=24):
+    method(table_to_string(df, index=index, max_cols=max_cols, max_rows=max_rows, col_space=col_space, max_colwidth=max_colwidth))
 
+
+def table_to_string(df: pd.DataFrame, index=False, max_cols=20, max_rows=5, col_space=16, max_colwidth=24):
+    return '\n'+df.to_string(index=index, index_names=index, max_cols=max_cols, max_rows=max_rows, justify='left',
+                             show_dimensions=True, col_space=col_space, max_colwidth=max_colwidth)+'\n'
+
+
+logger = get_logger(__name__)
 verbose = True
 
 
@@ -44,6 +48,10 @@ class MyTestCase(unittest.TestCase):
         expect_shape = (101, 8)
         load_filename = 'test_data/multiheader_table.xlsx'
         dump_filename = 'test_data/multiheader_table_to_delete_object.xlsx'
+        load_shape = None,
+        dump_shape = None,
+        load_columns = []
+        dump_columns = []
         try:
             handler = ExcelHandler(processing_type='object')
             df = handler.load(load_filename, header=[3,4])
@@ -80,7 +88,6 @@ class MyTestCase(unittest.TestCase):
             logger.info(f"\t assert list equal {load_columns=}, {dump_columns[1:]=}")
             self.assertListEqual(load_columns, dump_columns[1:])
 
-
     def test_basic_excel(self):
         expect_pass = 1
         expect_fail = 0
@@ -95,7 +102,7 @@ class MyTestCase(unittest.TestCase):
             df = handler.to_pandas()
             if df is not None:
                 if verbose:
-                    print_dataframe(df, logger.info)
+                    print_table(df, logger.info)
                 load_columns = list(df.columns)
                 load_len = len(df)
                 logger.info(f"\t expect dataframe len={expect_len} and get {len(df)}")
@@ -135,7 +142,7 @@ class MyTestCase(unittest.TestCase):
             df = handler.to_pandas()
             if df is not None:
                 if verbose:
-                    print_taburate(df, print)
+                    print_table(df, print)
                 load_columns = list(df.columns)
                 load_shape = df.shape
                 logger.info(f"expect dataframe shape={expect_shape} and get {load_shape}")

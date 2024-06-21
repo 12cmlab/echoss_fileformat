@@ -5,15 +5,6 @@ from . import xml_handler
 from . import excel_handler
 from . import feather_handler
 
-import logging
-import sys
+from .echoss_logger import get_logger, set_logger_level
 
-logger = logging.getLogger(__name__)
-
-# if the logger have not handlers, set a logger handler to console stdout logging
-if logger.handlers:
-    LOG_FORMAT = "%(asctime)s %(name)s %(levelname)s - %(message)s"
-    console_handler = logging.StreamHandler()
-    console_handler.setLevel(logging.INFO)
-    console_handler.setFormatter(logging.Formatter(LOG_FORMAT))
-    logger.addHandler(console_handler)
+from .fileformat import FileUtil, PandasUtil
