@@ -3,10 +3,10 @@ import time
 import logging
 import os
 
-from echoss_fileformat.json_handler import JsonHandler
-from echoss_fileformat import echoss_logger
+from echoss_fileformat import JsonHandler
+from echoss_fileformat import get_logger, to_table
 
-logger = echoss_logger.get_logger(logger_name='test_json_handler', backup_count=1)
+logger = get_logger(logger_name='test_json_handler', backup_count=1)
 
 
 class MyTestCase(unittest.TestCase):

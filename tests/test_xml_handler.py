@@ -1,16 +1,10 @@
 import unittest
 import time
-import logging
 import os
 
-from echoss_fileformat.xml_handler import XmlHandler
+from echoss_fileformat import XmlHandler, get_logger
 
-# configure the logger
-LOG_FORMAT = "%(asctime)s %(name)s %(levelname)s - %(message)s"
-logging.basicConfig(level=logging.INFO, format=LOG_FORMAT)
-logger = logging.getLogger(__name__)
-# use the logger
-
+logger = get_logger(__name__)
 verbose = True
 
 

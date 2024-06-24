@@ -3,13 +3,10 @@ import unittest
 import logging
 import os
 import time
-from echoss_fileformat.fileformat_base import FileformatBase
+from echoss_fileformat import FileformatBase
+from echoss_fileformat import get_logger, to_table
 
-# configure the logger
-LOG_FORMAT = "%(asctime)s %(name)s %(levelname)s - %(message)s"
-logging.basicConfig(level=logging.INFO, format=LOG_FORMAT)
-logger = logging.getLogger(__name__)
-# use the logger
+logger = get_logger("test_fileformat_nandler")
 
 
 class FileformatHandlerTestCase(unittest.TestCase):
@@ -37,8 +34,7 @@ class FileformatHandlerTestCase(unittest.TestCase):
         open_mode = 'r'
         with self.assertRaises(FileNotFoundError) as context:
             fp, binary_mode, opened = handler._get_file_obj(filename, open_mode)
-            if opened:
-                fp.close()
+            handler._safe_close(fp, opened)
         self.assertTrue(filename in str(context.exception))
 
         # not exist Directory and 'w'
@@ -46,8 +42,7 @@ class FileformatHandlerTestCase(unittest.TestCase):
         open_mode = 'w'
         with self.assertRaises(FileNotFoundError) as context:
             fp, binary_mode, opened = handler._get_file_obj(filename, open_mode)
-            if opened:
-                fp.close()
+            handler._safe_close(fp, opened)
         self.assertTrue(filename in str(context.exception))
 
         # exist Directory and 'r
@@ -55,8 +50,7 @@ class FileformatHandlerTestCase(unittest.TestCase):
         open_mode = 'r'
         with self.assertRaises(FileNotFoundError) as context:
             fp, mode, opened = handler._get_file_obj(filename, open_mode)
-            if opened:
-                fp.close()
+            handler._safe_close(fp, opened)
         self.assertTrue(filename in str(context.exception))
 
         # exist Directory and 'w'
@@ -65,7 +59,7 @@ class FileformatHandlerTestCase(unittest.TestCase):
         try:
             fp, mode, opened = handler._get_file_obj(filename, open_mode)
             if opened:
-                fp.close()
+                handler._safe_close(fp, opened)
                 # 임시 파일 삭제
                 os.remove(filename)
         except Exception as e:
@@ -102,7 +96,7 @@ class FileformatHandlerTestCase(unittest.TestCase):
                 line_list.clear()
 
             if opened:
-                fp.close()
+                handler._safe_close(fp, opened)
 
             if open_mode in ['r', 'rb']:
                 logger.info(f"assertEqual({len(line_list)}, 15)")
@@ -148,8 +142,8 @@ class FileformatHandlerTestCase(unittest.TestCase):
             logger.info(f"assertTrue {isinstance(fp, expect_instance)=}")
             self.assertTrue(isinstance(fp, expect_instance))
 
-            if fp:
-                fp.close()
+            if opened:
+                handler._safe_close(fp, opened)
                 if '_to_delete' in filename:
                     os.remove(filename)
         pass

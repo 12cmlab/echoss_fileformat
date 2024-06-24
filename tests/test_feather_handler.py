@@ -3,16 +3,13 @@ import time
 import logging
 import os
 
-from echoss_fileformat.csv_handler import CsvHandler
-from echoss_fileformat.feather_handler import FeatherHandler
+from echoss_fileformat import CsvHandler
+from echoss_fileformat import FeatherHandler
+from echoss_fileformat import get_logger, to_table
 
-# configure the logger
-LOG_FORMAT = "%(asctime)s %(name)s %(levelname)s - %(message)s"
-logging.basicConfig(level=logging.INFO, format=LOG_FORMAT)
-logger = logging.getLogger(__name__)
-# use the logger
-
+logger = get_logger("test_feather_handler")
 verbose = True
+
 
 class MyTestCase(unittest.TestCase):
     """
@@ -46,9 +43,14 @@ class MyTestCase(unittest.TestCase):
             pass_size = len(csv_handler.pass_list)
             fail_size = len(csv_handler.fail_list)
             csv_df = csv_handler.to_pandas()
-            expect_csv_str = "SEQ_NO,PROMTN_TY_CD,PROMTN_TY_NM,BRAND_NM,SVC_NM,ISSU_CO,PARTCPTN_CO,PSNBY_ISSU_CO,COUPON_CRTFC_CO,COUPON_USE_RT\r\n"+"0,9,대만프로모션발급인증통계,77chocolate,S0013,15,15,1.0,15,1.0"
+            expect_header = "SEQ_NO,PROMTN_TY_CD,PROMTN_TY_NM,BRAND_NM,SVC_NM,ISSU_CO,PARTCPTN_CO,PSNBY_ISSU_CO,COUPON_CRTFC_CO,COUPON_USE_RT"
+            expect_row = "0,9,대만프로모션발급인증통계,77chocolate,S0013,15,15,1.0,15,1.0"
+            expect_csv_str = expect_header+"\r\n"+expect_row
             csv_str = csv_handler.dumps()
-            # logger.info("[\n"+csv_str+"]")
+            if verbose:
+                logger.info("expect header [ "+expect_header+" ]")
+                logger.info(to_table(csv_df, col_space=10, max_colwidth=16))
+
             self.assertTrue(csv_str.startswith(expect_csv_str), "startswith fail")
 
             feather_handler = FeatherHandler()
@@ -78,10 +80,12 @@ class MyTestCase(unittest.TestCase):
         expect_fail = 0
         expect_shape = (10067,54)
         expect_file_size = 706626
-
+        handler = None
         try:
             handler = FeatherHandler()
             read_df = handler.load(load_filename)
+            if verbose:
+                logger.info(to_table(read_df, col_space=10, max_colwidth=16))
 
         except Exception as e:
             logger.error(f"\t File load fail by {e}")
