@@ -1,22 +1,11 @@
 import unittest
 import time
-import logging
 import os
 import sys
 import pandas as pd
 
-from echoss_fileformat.excel_handler import ExcelHandler
-from echoss_fileformat.echoss_logger import get_logger
-
-
-def print_table(df: pd.DataFrame, method, index=False, max_cols=20, max_rows=10, col_space=16, max_colwidth=24):
-    method(table_to_string(df, index=index, max_cols=max_cols, max_rows=max_rows, col_space=col_space, max_colwidth=max_colwidth))
-
-
-def table_to_string(df: pd.DataFrame, index=False, max_cols=20, max_rows=5, col_space=16, max_colwidth=24):
-    return '\n'+df.to_string(index=index, index_names=index, max_cols=max_cols, max_rows=max_rows, justify='left',
-                             show_dimensions=True, col_space=col_space, max_colwidth=max_colwidth)+'\n'
-
+from echoss_fileformat import ExcelHandler
+from echoss_fileformat import get_logger, PandasUtil
 
 logger = get_logger(__name__)
 verbose = True
@@ -59,7 +48,7 @@ class MyTestCase(unittest.TestCase):
             # t_pandas() 사용하지 않음
             if df is not None:
                 if verbose:
-                    print_table(df, logger.info)
+                    logger.info(PandasUtil.to_table(df))
                 load_columns = list(df.columns)
                 load_shape = df.shape
                 logger.info(f"\t expect dataframe shape={expect_shape} and get {load_shape}")
@@ -102,7 +91,7 @@ class MyTestCase(unittest.TestCase):
             df = handler.to_pandas()
             if df is not None:
                 if verbose:
-                    print_table(df, logger.info)
+                    logger.info(PandasUtil.to_table(df))
                 load_columns = list(df.columns)
                 load_len = len(df)
                 logger.info(f"\t expect dataframe len={expect_len} and get {len(df)}")
@@ -142,7 +131,7 @@ class MyTestCase(unittest.TestCase):
             df = handler.to_pandas()
             if df is not None:
                 if verbose:
-                    print_table(df, print)
+                    print(PandasUtil.to_table(df))
                 load_columns = list(df.columns)
                 load_shape = df.shape
                 logger.info(f"expect dataframe shape={expect_shape} and get {load_shape}")
@@ -191,7 +180,7 @@ class MyTestCase(unittest.TestCase):
 
                     logger.debug(f"load df columns={load_columns}")
                     if verbose:
-                        print_table(df, logger.info)
+                        logger.info(PandasUtil.to_table(df))
                     logger.debug(f"expect dataframe shape={expect_shape} and get {load_shape}")
 
                     is_same_df = expect_shape == load_shape and expect_columns == load_columns
@@ -203,7 +192,8 @@ class MyTestCase(unittest.TestCase):
                     logger.error('empty dataframe')
 
         except Exception as e:
-            logger.error(f"\t File load fail by {e}")
+            logger.error(f"\t File load fail : {e}")
+            logger.debug(f"{skiprows=}, {header=},  {succeed=} ")
             # self.assertTrue(True, f"\t File load fail by {e}")
 
     def test_multi_header_3(self):
@@ -218,7 +208,7 @@ class MyTestCase(unittest.TestCase):
             df = handler.to_pandas()
             if df is not None:
                 if verbose:
-                    print_table(df, print)
+                    print(PandasUtil.to_table(df))
                 load_columns = list(df.columns)
 
                 load_shape = df.shape

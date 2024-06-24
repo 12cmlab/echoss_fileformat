@@ -195,16 +195,19 @@ class PandasUtil:
         PandasUtil.c_marker = corner
 
     @staticmethod
-    def adjust_width(s, width):
-        display_width = wcwidth.wcswidth(s)
-        if display_width <= width:
-            return s + ' ' * (width - display_width)
+    def adjust_width(s: str, width: int):
+        try:
+            display_width = wcwidth.wcswidth(s)
+            if display_width <= width:
+                return s + ' ' * (width - display_width)
 
-        for i in range(width//2-3, len(s)):
-            current_width = wcwidth.wcswidth(s[:i])
-            if current_width > width - 3:
-                remaining_width = width - current_width
-                return s[:i] + '.' * remaining_width
+            for i in range(width//2-3, len(s)):
+                current_width = wcwidth.wcswidth(s[:i])
+                if current_width > width - 3:
+                    remaining_width = width - current_width
+                    return s[:i] + '.' * remaining_width
+        except Exception as e:
+            logger.error(f"Exception adjust_width({s=}, {width=})")
 
         return s[:width - 3] + '...'
 
@@ -241,7 +244,7 @@ class PandasUtil:
         return df
 
     @staticmethod
-    def to_table(df: pd.DataFrame, index=False, max_cols=20, max_rows=10, col_space=16, max_colwidth=28):
+    def to_table(df: pd.DataFrame, index=False, max_cols=10, max_rows=10, col_space=12, max_colwidth=24):
         df = PandasUtil.split_rows(df, max_rows)
         df = PandasUtil.split_columns(df, max_cols)
         df = PandasUtil.preprocess_dataframe(df)
@@ -250,18 +253,12 @@ class PandasUtil:
         col_widths = {}
         for col in df.columns:
             max_data_width = df[col].astype(str).apply(wcwidth.wcswidth).max()
-            col_widths[col] = min(max(max_data_width, wcwidth.wcswidth(col)), max_colwidth)
+            head_width = wcwidth.wcswidth(str(col))
+            col_widths[col] = min(max(max_data_width, head_width), max_colwidth)
             col_widths[col] = max(col_widths[col], col_space)
 
-        # Calculate the widths for each column
-        col_widths = {
-            col: min(max(df[col].astype(str).apply(wcwidth.wcswidth).max(), wcwidth.wcswidth(col)), max_colwidth)
-            for col in df.columns
-        }
-        col_widths = {col: max(width, col_space) for col, width in col_widths.items()}
-
         # Create the table header
-        header = [PandasUtil.adjust_width(col, col_widths[col]) for col in df.columns]
+        header = [PandasUtil.adjust_width(str(col), col_widths[col]) for col in df.columns]
         header_line = f' {PandasUtil.v_marker} '.join(header)
         border_line = PandasUtil.c_marker + PandasUtil.c_marker.join(
             [PandasUtil.h_marker * (col_widths[col] + 2) for col in df.columns]) + PandasUtil.c_marker

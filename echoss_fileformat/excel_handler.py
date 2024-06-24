@@ -2,6 +2,25 @@ import io
 import logging
 import pandas as pd
 # import openpyxl  # to_excel() 에서 사용하므로 설치는 되어야함
+# debugging
+from openpyxl import load_workbook
+
+
+def find_problematic_cells(file_path):
+    wb = load_workbook(filename=file_path)
+    sheet = wb.active
+
+    for row in sheet.iter_rows():
+        for cell in row:
+            try:
+                cell_value = cell.value
+                if isinstance(cell_value, str):
+                    # 셀 값을 개별 문자로 순회하며 ord() 함수를 적용
+                    for char in cell_value:
+                        _ = ord(char)
+            except Exception as e:
+                print(f"Error in cell {cell.coordinate}: {e}")
+
 
 from typing import Literal, Optional, Union
 
@@ -47,7 +66,7 @@ class ExcelHandler(CsvHandler):
             nrows (int): skiprows 부터 N개의 데이터 row 만 읽을 경우 숫자 지정
             usecols (Union[int, list]): 전체 컬럼 사용시 None, 컬럼 번호나 이름의 리스트 [0, 1, 2] or ['foo', 'bar', 'baz']
         """
-        # mode = self._check_file_or_filename(file_or_filename)
+        mode = self._check_file_or_filename(file_or_filename)
 
         try:
             df = pd.read_excel(
@@ -71,6 +90,9 @@ class ExcelHandler(CsvHandler):
             elif self.processing_type == CsvHandler.TYPE_OBJECT:
                 return df
         except Exception as e:
+            # debuging ord() expected a character bu string of length 4 found
+            find_problematic_cells(file_or_filename)
+
             self.fail_list.append(str(file_or_filename))
             logger.error(f"{file_or_filename} '{mode}' load raise {e}")
             if self.processing_type == CsvHandler.TYPE_OBJECT:

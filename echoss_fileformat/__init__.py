@@ -1,10 +1,8 @@
-from . import fileformat_base
-from . import csv_handler
-from . import json_handler
-from . import xml_handler
-from . import excel_handler
-from . import feather_handler
+from .csv_handler import CsvHandler
+from .json_handler import JsonHandler
+from .xml_handler import XmlHandler
+from .excel_handler import ExcelHandler
+from .feather_handler import FileformatBase
 
 from .echoss_logger import get_logger, set_logger_level
-
 from .fileformat import FileUtil, PandasUtil

@@ -1,25 +1,17 @@
 import unittest
 import time
-import logging
 import os
 import pandas as pd
 
-from echoss_fileformat.csv_handler import CsvHandler
-from echoss_fileformat import echoss_logger
-
-
-def print_table(df: pd.DataFrame, method, index=False, max_cols=20, max_rows=10, col_space=16, max_colwidth=24):
-    method(table_to_string(df, index=index, max_cols=max_cols, max_rows=max_rows, col_space=col_space, max_colwidth=max_colwidth))
-
-
-def table_to_string(df: pd.DataFrame, index=False, max_cols=20, max_rows=5, col_space=16, max_colwidth=24):
-    return '\n'+df.to_string(index=index, index_names=index, max_cols=max_cols, max_rows=max_rows, justify='left',
-                             show_dimensions=True, col_space=col_space, max_colwidth=max_colwidth)+'\n'
-
+from echoss_fileformat import CsvHandler
+from echoss_fileformat import echoss_logger, PandasUtil
 
 logger = echoss_logger.get_logger("test_csv_handler", backup_count=1)
-
 verbose = True
+
+
+def print_table(df: pd.DataFrame, method, index=False, max_cols=10, max_rows=10, col_space=12, max_colwidth=20):
+    method(PandasUtil.to_table(df, index, max_cols, max_rows, col_space, max_colwidth))
 
 
 class MyTestCase(unittest.TestCase):
