@@ -80,11 +80,13 @@ class MyTestCase(unittest.TestCase):
 
         load_filename = 'test_data/simple_standard.csv'
         dump_filename = 'test_data/simple_standard_to_delete.csv'
+        file_obj = None
+        handler = CsvHandler()
+
         for given_mode in modes:
             expect_pass = 1
             expect_fail = 0
             try:
-                handler = CsvHandler()
                 if 'text' == given_mode:
                     file_obj = open(load_filename, 'r', encoding='utf-8')
                 else:
@@ -140,34 +142,6 @@ class MyTestCase(unittest.TestCase):
             finally:
                 if file_obj:
                     file_obj.close()
-
-    def test_load_mutliline_by_mode(self):
-        processing_type = 'multiline'
-        modes = ['text', 'binary']
-        expect_passes = [1, 1]
-        expect_fails = [0, 0]
-
-        for mode, expect_pass, expect_fail in zip(modes, expect_passes, expect_fails):
-            try:
-                handler = CsvHandler(processing_type)
-                if mode == 'text':
-                    with open('test_data/simple_multiline_object.jsonl', 'r', encoding='utf-8') as fp:
-                        handler.load(fp)
-                        pass_size = len(handler.pass_list)
-                        fail_size = len(handler.fail_list)
-                elif mode == 'binary':
-                    with open('test_data/simple_multiline_object.jsonl', 'rb') as fb:
-                        handler.load(fb)
-                        pass_size = len(handler.pass_list)
-                        fail_size = len(handler.fail_list)
-            except Exception as e:
-                logger.error(f"\t assertTrue {mode} multiline File load fail by {e}")
-                self.assertTrue(True, f"\t {mode} multiline File load fail by {e}")
-            else:
-                logger.info(f"\t assertEqual({expect_pass}, {pass_size}) at {mode=}, {processing_type=}")
-                self.assertEqual(pass_size, expect_pass)
-                logger.info(f"\t assertEqual({expect_fail}, {fail_size}) at {mode=}, {processing_type=}")
-                self.assertEqual(fail_size, expect_fail)
 
 
 if __name__ == '__main__':

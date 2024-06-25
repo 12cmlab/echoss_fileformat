@@ -3,6 +3,7 @@
 """
 import os
 import pandas as pd
+from typing import Union, Literal, Optional
 import wcwidth
 
 from echoss_fileformat.csv_handler import CsvHandler
@@ -34,8 +35,7 @@ class FileUtil:
         pass
 
     def __str__(self):
-        return f"('handler': {FileUtil.WORKING_HANDLER})"
-
+        return f"echoss FileUtil.class ('handler': {FileUtil.WORKING_HANDLER})"
 
     @staticmethod
     def load(file_path: str, **kwargs) -> pd.DataFrame:
@@ -49,29 +49,29 @@ class FileUtil:
 
         """
         _, ext = os.path.splitext(file_path)
-        ext = ext.lower()
+        file_format = ext[1:].lower() if ext else None
 
-        if ".csv" == ext:
+        if "csv" == file_format:
             return FileUtil.read_csv(file_path, **kwargs)
-        elif ".xls" == ext:
+        elif ".ls" == file_format:
             return FileUtil.read_excel(file_path, **kwargs)
-        elif ".xlsx" == ext:
+        elif "xlsx" == file_format:
             return FileUtil.read_excel(file_path, **kwargs)
-        elif ".json" == ext:
+        elif "json" == file_format:
             return FileUtil.read_json(file_path, **kwargs)
-        elif ".jsonl" == ext:
+        elif "jsonl" == file_format:
             return FileUtil.read_jsonl(file_path, **kwargs)
-        elif ".xml" == ext:
+        elif "xml" == file_format:
             return FileUtil.read_xml(file_path, **kwargs)
         else:
             logger.error("File format {ext} is not supported")
             return EMPTY_DATAFRAME
 
     @staticmethod
-    def read_csv(file_path: str, **kwargs) -> pd.DataFrame:
+    def read_csv(file_or_filename, **kwargs) -> pd.DataFrame:
         processing_type = kwargs.pop('processing_type', 'object')
         handler = CsvHandler(processing_type=processing_type)
-        df = handler.load(file_path, **kwargs)
+        df = handler.load(file_or_filename, **kwargs)
         return df
 
     @staticmethod
@@ -114,6 +114,10 @@ class FileUtil:
         df = handler.to_pandas()
         return df
 
+    """
+    Write File Format
+    """
+
     @staticmethod
     def dump(df: pd.DataFrame, file_path: str, **kwargs) -> None:
         """데이터를 파일로 쓰기
@@ -145,40 +149,40 @@ class FileUtil:
             logger.error("File format {ext} is not supported")
 
     @staticmethod
-    def to_csv(df: pd.DataFrame, file_path: str, **kwargs) -> None:
+    def to_csv(df: pd.DataFrame, file_or_filename, **kwargs) -> None:
         processing_type = kwargs.pop('processing_type', 'object')
         handler = CsvHandler(processing_type=processing_type)
-        handler.dump(file_path, data=df, **kwargs)
+        handler.dump(file_or_filename, data=df, **kwargs)
 
     @staticmethod
-    def to_excel(df: pd.DataFrame, file_path: str, **kwargs) -> None:
+    def to_excel(df: pd.DataFrame, file_or_filename, **kwargs) -> None:
         processing_type = kwargs.pop('processing_type', 'object')
         handler = ExcelHandler(processing_type=processing_type)
-        handler.dump(file_path, data=df, **kwargs)
+        handler.dump(file_or_filename, data=df, **kwargs)
 
     @staticmethod
-    def to_feather(df: pd.DataFrame, file_path: str, **kwargs) -> None:
+    def to_feather(df: pd.DataFrame, file_or_filename, **kwargs) -> None:
         processing_type = kwargs.pop('processing_type', 'object')
         handler = FeatherHandler(processing_type=processing_type)
-        handler.dump(file_path, data=df, **kwargs)
+        handler.dump(file_or_filename, data=df, **kwargs)
 
     @staticmethod
-    def to_json(df: pd.DataFrame, file_path: str, **kwargs) -> None:
+    def to_json(df: pd.DataFrame, file_or_filename, **kwargs) -> None:
         processing_type = kwargs.pop('processing_type', 'object')
         handler = JsonHandler(processing_type=processing_type)
-        handler.dump(file_path, data=df, **kwargs)
+        handler.dump(file_or_filename, data=df, **kwargs)
 
     @staticmethod
-    def to_jsonl(df: pd.DataFrame, file_path: str, **kwargs) -> None:
+    def to_jsonl(df: pd.DataFrame, file_or_filename, **kwargs) -> None:
         processing_type = kwargs.pop('processing_type', 'multiline')
         handler = JsonHandler(processing_type='multiline')
-        handler.dump(file_path, data=df, **kwargs)
+        handler.dump(file_or_filename, data=df, **kwargs)
 
     @staticmethod
-    def to_xml(df: pd.DataFrame, file_path: str, **kwargs) -> None:
+    def to_xml(df: pd.DataFrame, file_or_filename, **kwargs) -> None:
         processing_type = kwargs.pop('processing_type', 'object')
         handler = XmlHandler(processing_type=processing_type)
-        handler.dump(file_path, data=df, **kwargs)
+        handler.dump(file_or_filename, data=df, **kwargs)
 
 
 class PandasUtil:

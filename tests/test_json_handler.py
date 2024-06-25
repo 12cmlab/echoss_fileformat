@@ -48,6 +48,7 @@ class MyTestCase(unittest.TestCase):
                 logger.info(f"\t {processing_type=} assertEqual({expect_fail=}, {fail_size=})")
                 self.assertEqual(fail_size, expect_fail)
 
+
     def test_load_complex_by_data_key(self):
         json_types = ['object', 'array', 'multiline']
         expect_passes = [0, 102, 0]

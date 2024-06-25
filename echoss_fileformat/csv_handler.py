@@ -53,23 +53,33 @@ class CsvHandler(FileformatBase):
             usecols (Union[int, list]): 전체 컬럼 사용시 None, 컬럼 번호나 이름의 리스트 [0, 1, 2] or ['foo', 'bar', 'baz']
             **kwargs : 추가 키워드 옵션
         """
+        fp = None
+        opened = None
         try:
             # file_or_filename 객체가 지원되는 file-like object 또는 filename string 인지 검사
             open_mode = self._decide_rw_open_mode('load')
             fp, binary_mode, opened = self._get_file_obj(file_or_filename, open_mode)
 
+            # kwargs pop ?
+            kw_encoding = kwargs.pop('encoding', self.encoding)
+            kw_sep = kwargs.pop('sep', self.delimiter)
+            kw_quotechar = kwargs.pop('quotechar', self.quotechar)
+            kw_escapechar = kwargs.pop('escapechar', self.escapechar)
+            kw_infer_datetime_format = kwargs.pop('infer_datetime_format', True)
+            kw_on_bad_lines = kwargs.pop('on_bad_lines', 'warn')
+
             df = pd.read_csv(
                 fp,
-                encoding=self.encoding,
-                sep=self.delimiter,
-                quotechar=self.quotechar,
-                escapechar=self.escapechar,
+                encoding=kw_encoding,
+                sep=kw_sep,
+                quotechar=kw_quotechar,
+                escapechar=kw_escapechar,
                 header=header,
                 skiprows=skiprows,
                 nrows=nrows,
                 usecols=usecols,
-                infer_datetime_format=True,
-                on_bad_lines='warn',
+                infer_datetime_format=kw_infer_datetime_format,
+                on_bad_lines=kw_on_bad_lines,
                 **kwargs
             )
 
@@ -81,8 +91,7 @@ class CsvHandler(FileformatBase):
             self.fail_list.append(str(file_or_filename))
             logger.error(f"{file_or_filename} load raise: {e}")
         finally:
-            if opened and fp:
-                fp.close()
+            self._safe_close(fp, opened)
 
 
     def loads(self, str_or_bytes: Union[str, bytes],
@@ -179,22 +188,27 @@ class CsvHandler(FileformatBase):
             else:
                 df = data
 
+                # kwargs pop ?
+            kw_encoding = kwargs.pop('encoding', self.encoding)
+            kw_sep = kwargs.pop('sep', self.delimiter)
+            kw_quotechar = kwargs.pop('quotechar', self.quotechar)
+            kw_escapechar = kwargs.pop('escapechar', self.escapechar)
+            kw_quoting = kwargs.pop('quoting', self.quoting)
+            kw_index = kwargs.pop('index', False)
             df.to_csv(
                 fp,
-                encoding=self.encoding,
-                sep=self.delimiter,
-                quotechar=self.quotechar,
-                escapechar=self.escapechar,
-                quoting=self.quoting,
-                index=False
+                encoding=kw_encoding,
+                sep=kw_delimiter,
+                quotechar=kw_quotechar,
+                escapechar=kw_escapechar,
+                quoting=kw_quoting,
+                index=kw_index
             )
         except Exception as e:
             self.fail_list.append(str(file_or_filename))
             logger.error(f"{file_or_filename} load raise: {e}")
         finally:
-            if opened and fp:
-                fp.close()
-
+            self._safe_close(fp, opened)
 
     def dumps(self, data: pd.DataFrame = None) -> str:
         """데이터를 CSV 파일로 쓰기
