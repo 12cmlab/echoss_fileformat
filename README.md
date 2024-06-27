@@ -19,7 +19,7 @@ pip install echoss_fileformat -U
 ## Usage
 
 1. static call 
-1. static call
+
 python
 from echoss_fileformat import FileUtil, PandasUtil, get_logger, set_logger_level
 

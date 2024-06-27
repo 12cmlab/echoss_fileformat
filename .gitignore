@@ -33,7 +33,6 @@ var/
 
 # .idea
 .idea/
-.idea/*
 
 # Unit test / coverage reports
 htmlcov/
@@ -51,6 +50,7 @@ coverage.xml
 
 # Django stuff:
 *.log
+*.log.*
 
 # Sphinx documentation
 docs/_build/
@@ -80,6 +80,7 @@ target/
 # vim
 *.swp
 *.swo
+*.un~
 
 # Mypy cache
 .mypy_cache/
