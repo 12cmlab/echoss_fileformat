@@ -1,19 +1,26 @@
 import logging
+import os
 import sys
 from logging.handlers import TimedRotatingFileHandler
 
 LOG_FORMAT = "%(asctime)s %(levelname)-5s - %(name)s : %(message)s"
 LOG_FILE = "echoss.log"
+# Set environment variable for Python IO encoding
+os.environ["PYTHONIOENCODING"] = "utf-8"
+# Set stdout and stderr to UTF-8 encoding
+# sys.stdout = open(sys.stdout.fileno(), mode='w', encoding='utf-8', buffering=1)
+# sys.stderr = open(sys.stderr.fileno(), mode='w', encoding='utf-8', buffering=1)
 
 
 def _get_console_handler(formatter):
     console_handler = logging.StreamHandler(sys.stdout)
     console_handler.setFormatter(formatter)
+    # set utf-8 encoding
     return console_handler
 
 
 def _get_file_handler(formatter, file_path, backup_count):
-    file_handler = TimedRotatingFileHandler(file_path, when="midnight", backupCount=backup_count)
+    file_handler = TimedRotatingFileHandler(file_path, when="midnight", backupCount=backup_count, encoding='utf-8')
     file_handler.setFormatter(formatter)
     return file_handler
 

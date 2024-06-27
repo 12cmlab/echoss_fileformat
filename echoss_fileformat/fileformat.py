@@ -224,7 +224,7 @@ class PandasUtil:
                 text = text.replace('\t', '\\t').replace('\x0b', ' ').replace('\x0c', ' ')
                 text = text.replace('\u200b', '')
             return text
-        df = df.applymap(clean_text)
+        df = df.map(clean_text)
         return df
 
     @staticmethod

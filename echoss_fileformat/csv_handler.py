@@ -78,7 +78,7 @@ class CsvHandler(FileformatBase):
                 skiprows=skiprows,
                 nrows=nrows,
                 usecols=usecols,
-                infer_datetime_format=kw_infer_datetime_format,
+                # infer_datetime_format=kw_infer_datetime_format,
                 on_bad_lines=kw_on_bad_lines,
                 **kwargs
             )
@@ -198,7 +198,7 @@ class CsvHandler(FileformatBase):
             df.to_csv(
                 fp,
                 encoding=kw_encoding,
-                sep=kw_delimiter,
+                sep=kw_sep,
                 quotechar=kw_quotechar,
                 escapechar=kw_escapechar,
                 quoting=kw_quoting,
