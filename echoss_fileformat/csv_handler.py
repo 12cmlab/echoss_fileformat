@@ -198,7 +198,7 @@ class CsvHandler(FileformatBase):
             df.to_csv(
                 fp,
                 encoding=kw_encoding,
-                sep=kw_delimiter,
+                sep=kw_sep,
                 quotechar=kw_quotechar,
                 escapechar=kw_escapechar,
                 quoting=kw_quoting,
