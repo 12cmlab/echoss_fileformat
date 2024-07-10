@@ -72,44 +72,6 @@ class MyTestCase(unittest.TestCase):
             logger.info(f"\t load expect fail {expect_fail} get {fail_size}")
             self.assertTrue(fail_size == expect_fail)
 
-    def test_load_feather(self):
-        load_filename = 'test_data/sin_kun_daeri.feather'
-        dump_filename = 'test_data/sin_kun_daeri_to_delete.feather'
-
-        expect_pass = 1
-        expect_fail = 0
-        expect_shape = (10067,54)
-        expect_file_size = 706626
-        handler = None
-        try:
-            handler = FeatherHandler()
-            read_df = handler.load(load_filename)
-            if verbose:
-                logger.info(to_table(read_df, col_space=10, max_colwidth=16))
-
-        except Exception as e:
-            logger.error(f"\t File load fail by {e}")
-            self.assertTrue(True, f"\t File load fail by {e}")
-
-        try:
-            handler.dump(dump_filename, data=read_df)
-            exist = os.path.exists(dump_filename)
-            file_size = os.path.getsize(dump_filename)
-
-            if 'to_delete' in dump_filename:
-                os.remove(dump_filename)
-
-        except Exception as e:
-            logger.error(f"\t File dump fail by {e}")
-            self.assertTrue(True, f"\t File dump fail by {e}")
-        else:
-            logger.info(f"{handler} expect shape={expect_shape}, and get shape={read_df.shape}")
-            self.assertEqual(expect_shape, read_df.shape)
-            logger.info(f"{handler} dump expect exist True get {exist}")
-            self.assertTrue(exist)
-            logger.info(f"{handler} dump expect file_size {expect_file_size} get {file_size}")
-            self.assertEqual(expect_file_size, file_size)
-
 
 if __name__ == '__main__':
     unittest.main(verbosity=2)

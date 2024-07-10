@@ -3,8 +3,7 @@ import json
 import logging
 import pandas as pd
 from typing import Dict, Literal, Optional, Union
-# import xml.etree.ElementTree as ET
-import lxml.etree as et
+from lxml import etree as et
 
 from .fileformat_base import FileformatBase
 
@@ -52,6 +51,8 @@ class XmlHandler(FileformatBase):
         Returns:
             list of json object, which passing load json processing till now
         """
+        fp = None,
+        opened = False
         try:
             open_mode = self._decide_rw_open_mode('load')
 
@@ -85,12 +86,7 @@ class XmlHandler(FileformatBase):
             logger.error(f"'{file_or_filename}' load raise: {e}")
             raise e
         finally:
-            if opened and fp:
-                fp.close()
-
-        # 'object' 처리 유형의 파일 처리는 루트 트리를 바로 리턴
-        if self.processing_type == FileformatBase.TYPE_OBJECT:
-            return root
+            self._safe_close(fp, opened)
 
         # 'array' 처리 유형의 파일 처리
         # 'array' 모드에서는 tag 의 attrib 는 처리하지 않고, text 만 사용함
@@ -107,47 +103,20 @@ class XmlHandler(FileformatBase):
             logger.error(f"'{file_or_filename}' load raise: {e}")
             raise e
 
-        try:
-            for child in data_nodes:
+        for child in data_nodes:
+            try:
                 node_dict = {}
                 self._add_all_child_text(child, node_dict, usecols=usecols)
                 self.pass_list.append(node_dict)
                 self.child_tag = child.tag
-            #
-            #
-            # else:
-            #     for child in data_nodes:
-            #         node_dict = {}
-            #         for sub_child in child:
-            #             node_key = et.QName(sub_child).localname
-            #             if node_key in usecols:
-            #                 node_dict[node_key] = sub_child.text
-            #
-            #
-            # for child in data_nodes:
-            #     node_dict = {}
-            #     try:
-            #         if isinstance(child, et._ElementTree):
-            #             if usecols:
-            #                 for sub_child in child:
-            #                     if sub_child.tag in usecols:
-            #                         node_dict[sub_child.tag] = sub_child.text
-            #             else:
-            #                 for sub_child in child:
-            #                     node_dict[sub_child.tag] = sub_child.text
-            #         else:  # isinstance(child, et._Element)
-            #             if usecols:
-            #                 for key in usecols:
-            #                     node_dict[key] = child.get(key)
-            #             else:
-            #                 for k, v in child.items():
-            #                     node_dict[k] = v
-            #             node_dict['text'] = str(child.text)
-            # self.pass_list.append(node_dict)
-            # self.child_tag = child.tag
-        except Exception as e:
-            self.fail_list.append(str(child))
-            logger.error(f"'{file_or_filename}' load raise {e}")
+            except Exception as e:
+                self.fail_list.append(str(child))
+                logger.error(f"'{file_or_filename}' load raise {e}")
+
+        # 'object' 처리 유형의 파일 처리는 루트 트리를 바로 리턴
+        if self.processing_type == FileformatBase.TYPE_OBJECT:
+            return data_nodes
+
 
     def loads(self, str_or_bytes: Union[str, bytes],
               data_key: str = None, usecols: list = None) -> Optional[et.Element]:
@@ -160,6 +129,7 @@ class XmlHandler(FileformatBase):
             data_key (str): if empty use whole file, else use only key value. for example 'data'
             usecols (list]): 전체 키 사용시 None, 이름의 리스트 ['foo', 'bar', 'baz'] 처럼 사용
         """
+        root = None
         try:
             if isinstance(str_or_bytes, str):
                 file_obj = io.StringIO(str_or_bytes)
@@ -410,3 +380,67 @@ class XmlHandler(FileformatBase):
                     return text
             else:
                 return text
+
+    def xml_to_dict(self, node: et.Element) -> dict:
+        """convert an etree to dictionary
+\
+        Returns: dict
+        """
+        d = {node.tag: {} if node.attrib else None}
+        children = list(node)
+        if children:
+            dd = {}
+            for dc in map(self.xml_to_dict, children):
+                for k, v in dc.items():
+                    if k in dd:
+                        if not isinstance(dd[k], list):
+                            dd[k] = [dd[k]]
+                        dd[k].append(v)
+                    else:
+                        dd[k] = v
+            d = {node.tag: dd}
+        if node.attrib:
+            d[node.tag].update((k, v) for k, v in node.attrib.items())
+        if node.text:
+            text = node.text.strip()
+            if children or node.attrib:
+                if text:
+                    d[node.tag]['text'] = text
+            else:
+                d[node.tag] = text
+        return d
+
+    def dict_to_xml(self, tag, d):
+        """
+        Turn a simple dict of key/value pairs into XML
+        """
+        elem = et.Element(tag)
+        for key, val in d.items():
+            if isinstance(val, dict):
+                child = self.dict_to_xml(key, val)
+                elem.append(child)
+            elif isinstance(val, list):
+                for sub_dict in val:
+                    child = self.dict_to_xml(key, sub_dict)
+                    elem.append(child)
+            else:
+                child = et.SubElement(elem, key)
+                child.text = str(val)
+                elem.append(child)
+        return elem
+
+    def dict_dump(self, config: dict, tag: str, file_path: str):
+        """config dictionary write to file path with wrapping root tag
+        Args:
+            config (dict): config dictionary
+            tag (str): wrapping root tag
+            file_path (str): file path to write
+        """
+        if len(config) == 1 and tag is None:
+            for k, v in config.items():
+                root_node = self.dict_to_xml(k, v)
+        else:
+            root_node = self.dict_to_xml(tag, config)
+        tree = et.ElementTree(root_node)
+        with open(file_path, 'wb') as f:
+            tree.write(f, pretty_print=True, xml_declaration=True, encoding=self.encoding)

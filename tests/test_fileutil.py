@@ -113,7 +113,7 @@ class FileUtilTestCase(unittest.TestCase):
 
             read_df = None
             if exist and 'to_delete' in dump_filename:
-                read_df = FileUtil.read_csv(dump_filename)
+                read_df = FileUtil.load_csv(dump_filename)
                 os.remove(dump_filename)
 
             logger.info(f"assertTrue dump expect exist True get {exist}")
@@ -165,12 +165,12 @@ class FileUtilTestCase(unittest.TestCase):
                     file_obj = open(dump_filename, 'w', encoding='utf-8')
                 else:
                     file_obj = open(dump_filename, 'wb')
-                FileUtil.to_csv(csv_df, file_obj, quoting=0)
+                FileUtil.dump_csv(csv_df, file_obj, quoting=0)
                 if file_obj:
                     file_obj.close()
                     file_obj = None
 
-                check_df = FileUtil.read_csv(dump_filename)
+                check_df = FileUtil.load_csv(dump_filename)
                 if check_df is not None and len(check_df) > 0:
                     df_shape = check_df.shape
                     if expect_shape == df_shape:
@@ -191,6 +191,76 @@ class FileUtilTestCase(unittest.TestCase):
             finally:
                 if file_obj:
                     file_obj.close()
+
+    def test_config_properties(self):
+        # Assign
+        config_dict = FileUtil.dict_load('test_data/config_without_section.properties')
+        logger.info(f"{config_dict=}")
+
+        # Act
+        dump_filename = 'test_data/config_without_section_to_delete.properties'
+        FileUtil.dict_dump(config_dict, dump_filename)
+        reload_dict = FileUtil.dict_load('test_data/config_without_section_to_delete.properties')
+        logger.info(f"{reload_dict=}")
+
+        if 'to_delete' in dump_filename:
+            os.remove(dump_filename)
+
+        # Assert
+        self.assertDictEqual(config_dict, reload_dict, "is same or not?")
+
+        pass
+
+    def test_config_sections_properties(self):
+        # Assign
+        config_dict = FileUtil.dict_load('test_data/config_with_sections.properties')
+        logger.info(f"{config_dict=}")
+
+        # Act
+        dump_filename = 'test_data/config_with_sections_to_delete.properties'
+        FileUtil.dict_dump(config_dict, dump_filename)
+        reload_dict = FileUtil.dict_load('test_data/config_with_sections_to_delete.properties')
+        logger.info(f"{reload_dict=}")
+
+        if 'to_delete' in dump_filename:
+            os.remove(dump_filename)
+
+        # Assert
+        self.assertDictEqual(config_dict, reload_dict, "is same or not?")
+
+    def test_config_yaml(self):
+        # Assign
+        config_dict = FileUtil.dict_load('test_data/AIservice_config.yaml')
+        logger.info(f"{config_dict=}")
+
+        # Act
+        dump_filename = 'test_data/AIservice_config_to_delete.yaml'
+        FileUtil.dict_dump(config_dict, dump_filename)
+        reload_dict = FileUtil.dict_load(dump_filename)
+        logger.info(f"{reload_dict=}")
+
+        if 'to_delete' in dump_filename:
+            os.remove(dump_filename)
+
+        # Assert
+        self.assertDictEqual(config_dict, reload_dict, "is same or not?")
+
+    def test_config_xml(self):
+        # Assign
+        config_dict = FileUtil.dict_load('test_data/config.xml')
+        logger.info(f"{config_dict=}")
+
+        # Act
+        dump_filename = 'test_data/config_to_delete.xml'
+        FileUtil.dict_dump(config_dict, dump_filename)
+        reload_dict = FileUtil.dict_load(dump_filename)
+        logger.info(f"{reload_dict=}")
+
+        if 'to_delete' in dump_filename:
+            os.remove(dump_filename)
+
+        # Assert
+        self.assertDictEqual(config_dict, reload_dict, "is same or not?")
 
 if __name__ == '__main__':
     unittest.main(verbosity=2)

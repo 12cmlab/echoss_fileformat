@@ -1,6 +1,6 @@
 # for v1.1
 from .echoss_logger import get_logger, set_logger_level
-from .fileformat import FileUtil, PandasUtil
+from .fileformat import FileUtil
 
 from .fileformat_base import FileformatBase
 from .csv_handler import CsvHandler
@@ -17,6 +17,6 @@ from . import excel_handler
 from . import feather_handler
 
 # export static method of v1.1
-to_table = PandasUtil.to_table
+to_table = FileUtil.to_table
 
 

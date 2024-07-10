@@ -5,7 +5,7 @@ import sys
 import pandas as pd
 
 from echoss_fileformat import ExcelHandler
-from echoss_fileformat import get_logger, PandasUtil
+from echoss_fileformat import get_logger, to_table
 
 logger = get_logger(__name__)
 verbose = True
@@ -48,7 +48,7 @@ class MyTestCase(unittest.TestCase):
             # t_pandas() 사용하지 않음
             if df is not None:
                 if verbose:
-                    logger.info(PandasUtil.to_table(df))
+                    logger.info(to_table(df))
                 load_columns = list(df.columns)
                 load_shape = df.shape
                 logger.info(f"\t expect dataframe shape={expect_shape} and get {load_shape}")
@@ -91,7 +91,7 @@ class MyTestCase(unittest.TestCase):
             df = handler.to_pandas()
             if df is not None:
                 if verbose:
-                    logger.info(PandasUtil.to_table(df))
+                    logger.info(to_table(df))
                 load_columns = list(df.columns)
                 load_len = len(df)
                 logger.info(f"\t expect dataframe len={expect_len} and get {len(df)}")
@@ -131,7 +131,7 @@ class MyTestCase(unittest.TestCase):
             df = handler.to_pandas()
             if df is not None:
                 if verbose:
-                    print(PandasUtil.to_table(df))
+                    print(to_table(df))
                 load_columns = list(df.columns)
                 load_shape = df.shape
                 logger.info(f"expect dataframe shape={expect_shape} and get {load_shape}")
@@ -180,7 +180,7 @@ class MyTestCase(unittest.TestCase):
 
                     logger.debug(f"load df columns={load_columns}")
                     if verbose:
-                        logger.info(PandasUtil.to_table(df))
+                        logger.info(to_table(df))
                     logger.debug(f"expect dataframe shape={expect_shape} and get {load_shape}")
 
                     is_same_df = expect_shape == load_shape and expect_columns == load_columns
@@ -208,7 +208,7 @@ class MyTestCase(unittest.TestCase):
             df = handler.to_pandas()
             if df is not None:
                 if verbose:
-                    print(PandasUtil.to_table(df))
+                    print(to_table(df))
                 load_columns = list(df.columns)
 
                 load_shape = df.shape

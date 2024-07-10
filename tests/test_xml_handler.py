@@ -1,7 +1,7 @@
 import unittest
 import time
 import os
-
+from lxml import etree as et
 from echoss_fileformat import XmlHandler, get_logger
 
 logger = get_logger(__name__)
@@ -132,6 +132,22 @@ class MyTestCase(unittest.TestCase):
             except Exception as e:
                 logger.error(f"\t {processing_type=} File dump raise: {e}")
                 self.assertTrue(True, f"\t {processing_type=} File dump raise: {e}")
+
+    def test_to_dict(self):
+        # Sample XML data
+        xml_data = """
+        <note>
+          <to>Tove</to>
+          <from>Jani</from>
+          <heading>Reminder</heading>
+          <body>Don't forget me this weekend!</body>
+        </note>
+        """
+        handler = XmlHandler(processing_type='object')
+        root = et.fromstring(xml_data)
+        xml_dict = handler.xml_to_dict(root)
+        logger.info(xml_data)
+        logger.info(xml_dict)
 
 
 if __name__ == '__main__':

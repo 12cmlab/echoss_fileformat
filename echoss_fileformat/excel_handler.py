@@ -1,9 +1,10 @@
 import io
 import logging
 import pandas as pd
-# import openpyxl  # to_excel() 에서 사용하므로 설치는 되어야함
-# debugging
+# for new format xlsx
 from openpyxl import load_workbook
+# for old format xls
+import xlrd
 
 
 def find_problematic_cells(file_path):
@@ -53,7 +54,7 @@ class ExcelHandler(CsvHandler):
         self.write_engine = 'openpyxl'
 
     def load(self, file_or_filename: Union[io.TextIOWrapper, io.BytesIO, io.BufferedIOBase, str],
-             sheet_name=0, skiprows=0, header=0, nrows=None, usecols=None) -> Optional[pd.DataFrame]:
+             sheet_name=0, skiprows=0, header=0, nrows=None, usecols=None, **kwargs) -> Optional[pd.DataFrame]:
         """Excel 파일 읽기
 
         Args:
@@ -77,7 +78,7 @@ class ExcelHandler(CsvHandler):
                 nrows=nrows,
                 usecols=usecols,
                 parse_dates=True,
-                engine=self.read_engine
+                **kwargs
             )
 
             if self.processing_type == CsvHandler.TYPE_ARRAY:
@@ -99,7 +100,7 @@ class ExcelHandler(CsvHandler):
                 return None
 
     def loads(self, str_or_bytes: Union[str, bytes],
-              sheet_name=0, header=0, skiprows=0, nrows=None, usecols=None):
+              sheet_name=0, header=0, skiprows=0, nrows=None, usecols=None, **kwargs):
         """문자열이나 bytes 에서 Excel 읽기
 
         Args:
@@ -120,7 +121,7 @@ class ExcelHandler(CsvHandler):
                 file_obj = io.BytesIO(str_or_bytes)
             if file_obj:
                 df = self.load(file_obj, sheet_name=sheet_name,
-                          skiprows=skiprows, header=header, nrows=nrows, usecols=usecols)
+                          skiprows=skiprows, header=header, nrows=nrows, usecols=usecols, **kwargs)
                 if self.processing_type == CsvHandler.TYPE_OBJECT:
                     return df
         except Exception as e:
@@ -133,7 +134,7 @@ class ExcelHandler(CsvHandler):
     # def to_pandas() 는 data_list 에 dataframe 을 저장하는 방식이 CsvHandler 와 동일하여 따로 정의하지 않음
     #
 
-    def dump(self, file_or_filename, sheet_name='Sheet1', data: pd.DataFrame = None) -> None:
+    def dump(self, file_or_filename, sheet_name='Sheet1', data: pd.DataFrame = None, **kwargs) -> None:
         """데이터를 Excel 파일로 쓰기
 
         파일은 text, binary 모드 파일객체이거나 파일명 문자열
@@ -168,7 +169,8 @@ class ExcelHandler(CsvHandler):
             df.to_excel(
                 file_or_filename,
                 sheet_name=sheet_name,
-                index=use_index
+                index=use_index,
+                **kwargs
             )
 
             # write to Excel file
@@ -178,7 +180,7 @@ class ExcelHandler(CsvHandler):
         except Exception as e:
             logger.error(f"'{str(file_or_filename)}' dump raise {e}")
 
-    def dumps(self, sheet_name='Sheet1', data: pd.DataFrame = None) -> str:
+    def dumps(self, sheet_name='Sheet1', data: pd.DataFrame = None, **kwargs) -> str:
         """데이터를 CSV 파일로 쓰기
 
         파일은 text, binary 모드 파일객체이거나 파일명 문자열
@@ -190,7 +192,7 @@ class ExcelHandler(CsvHandler):
         file_obj = io.StringIO()
 
         try:
-            self.dump(file_obj, sheet_name=sheet_name, data=data)
+            self.dump(file_obj, sheet_name=sheet_name, data=data, **kwargs)
         except Exception as e:
             logger.error(f"{self} dumps raise: {e}")
 

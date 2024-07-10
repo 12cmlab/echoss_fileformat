@@ -75,8 +75,7 @@ class JsonHandler(FileformatBase):
                 self.fail_list.append(str(fp))
                 logger.error(f"{fp=}, {binary_mode=}, {opened=}, {self.processing_type=} load raise: {e}")
         # close opened file if filename
-        if opened and fp:
-            fp.close()
+        self._safe_close(fp, opened)
         if self.processing_type == FileformatBase.TYPE_OBJECT:
             return root_json
 

@@ -68,6 +68,7 @@ class CsvHandler(FileformatBase):
             kw_infer_datetime_format = kwargs.pop('infer_datetime_format', True)
             kw_on_bad_lines = kwargs.pop('on_bad_lines', 'warn')
 
+            # noinspection PyTypeChecker
             df = pd.read_csv(
                 fp,
                 encoding=kw_encoding,
@@ -78,7 +79,6 @@ class CsvHandler(FileformatBase):
                 skiprows=skiprows,
                 nrows=nrows,
                 usecols=usecols,
-                infer_datetime_format=kw_infer_datetime_format,
                 on_bad_lines=kw_on_bad_lines,
                 **kwargs
             )
