@@ -4,7 +4,7 @@ import pandas as pd
 from typing import Dict, Literal, Optional, Union
 
 from .fileformat_base import FileformatBase
-from echoss_fileformat.echoss_logger import get_logger
+from .echoss_logger import get_logger, set_logger_level
 
 logger = get_logger("echoss_fileformat")
 

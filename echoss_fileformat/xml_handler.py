@@ -1,13 +1,13 @@
 import io
 import json
-import logging
 import pandas as pd
 from typing import Dict, Literal, Optional, Union
 from lxml import etree as et
 
 from .fileformat_base import FileformatBase
+from .echoss_logger import get_logger, set_logger_level
 
-logger = logging.getLogger(__name__)
+logger = get_logger('echoss_fileformat')
 
 
 class XmlHandler(FileformatBase):

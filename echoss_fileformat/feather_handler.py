@@ -1,12 +1,12 @@
 import io
-import logging
 import pandas as pd
 import pyarrow.feather as feather
 from typing import Dict, Literal, Optional, Union
 
 from .fileformat_base import FileformatBase
+from .echoss_logger import get_logger, set_logger_level
 
-logger = logging.getLogger(__name__)
+logger = get_logger('echoss_fileformat')
 
 
 class FeatherHandler(FileformatBase):

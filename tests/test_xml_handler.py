@@ -34,7 +34,8 @@ class MyTestCase(unittest.TestCase):
         expect_passes = [0, 0]
         expect_fails = [0, 0]
 
-        for processing_type, file_name, expect_pass, expect_fail in zip(processing_types, file_names, expect_passes, expect_fails):
+        for processing_type, file_name, expect_pass, expect_fail in \
+                zip(processing_types, file_names, expect_passes, expect_fails):
             try:
                 handler = XmlHandler(processing_type)
                 tree_obj = handler.load(file_name)
@@ -97,7 +98,8 @@ class MyTestCase(unittest.TestCase):
     def test_load_array_by_data_key(self):
         processing_types = ['array', 'array']
         load_filenames = ['test_data/complex_one_object.xml', 'test_data/complex_one_object.xml']
-        dump_filenames = ['test_data/complex_one_object_to_delete_bndbox.xml', 'test_data/simple_pom_to_delete_object.xml']
+        dump_filenames = ['test_data/complex_one_object_to_delete_bndbox.xml',
+                          'test_data/simple_pom_to_delete_object.xml']
         data_keys = ['.//bndbox', './/object']
         expect_file_sizes = [1132, 11082]
 
