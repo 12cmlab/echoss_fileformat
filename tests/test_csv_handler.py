@@ -10,9 +10,6 @@ logger = echoss_logger.get_logger("test_csv_handler", backup_count=1)
 verbose = True
 
 
-def print_table(df: pd.DataFrame, method, index=False, max_cols=10, max_rows=10, col_space=12, max_colwidth=20):
-    method(PandasUtil.to_table(df, index, max_cols, max_rows, col_space, max_colwidth))
-
 
 class MyTestCase(unittest.TestCase):
     """
@@ -47,7 +44,7 @@ class MyTestCase(unittest.TestCase):
             csv_df = handler.to_pandas()
             if csv_df is not None:
                 if verbose:
-                    print_table(csv_df.head(10), logger.info)
+                    logger.info(to_table(csv_df))
             else:
                 logger.info('empty dataframe')
             expect_csv_str = "SEQ_NO,PROMTN_TY_CD,PROMTN_TY_NM,BRAND_NM,SVC_NM,ISSU_CO,PARTCPTN_CO,PSNBY_ISSU_CO,COUPON_CRTFC_CO,COUPON_USE_RT\r\n"+"0,9,대만프로모션발급인증통계,77chocolate,S0013,15,15,1.0,15,1.0"
