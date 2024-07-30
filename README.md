@@ -54,6 +54,7 @@ logger.debug(to_table(json_df))
   * 확자자 .jsonl : 라인 하나가 json  객체인 multi line json 파일 형태
   * 확장자 .xml : xml 파일포맷으로 읽기
   * 확장자 .parquet : parquet 파일포맷으로 읽기
+  * 확장자 .feather : feather 파일포맷으로 읽기
 - FileUtil.load(filename_or_file, file_format='csv') :  csv 파일 포맷으로 파일명  또는 file-like object 로 읽음
 - FileUtil.load(filename_or_file, file_format='xlsx') :  excel 파일 포맷으로 파일명  또는 file-like object 로 읽음
 - FileUtil.load(filename_or_file, file_format='json') :  json 파일 포맷으로 파일명  또는 file-like object 로 읽음
@@ -67,6 +68,7 @@ logger.debug(to_table(json_df))
   * 확자자 .jsonl : 라인 하나가 json  객체인 multi line json 파일 형태
   * 확장자 .xml : xml 파일포맷으로 쓰기
   * 확장자 .parquet : parquet 파일포맷으로 쓰기
+  * 확장자 .feather : feather 파일포맷으로 쓰기
 - FileUtil.dump(filename_or_file, file_format='jsonl') :  jsonl 파일 포맷으로 파일명  또는 file-like object 로 쓰기
 - FileUtil.dump_xml(filename_or_file, file_format='xml', force_write=True) :  xml 파일 포맷으로 overwrite 파일 쓰기
 

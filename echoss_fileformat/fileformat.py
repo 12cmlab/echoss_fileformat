@@ -73,8 +73,10 @@ class FileUtil:
             return FileUtil.load_xml(file_path, **kwargs)
         elif "parquet" == file_format:
             return pd.read_parquet(file_path, **kwargs)
+        elif "feather" == file_format:
+            return pd.read_feather(file_path, **kwargs)
         else:
-            logger.error("File format {ext} is not supported")
+            logger.error(f"File format {ext} is not supported")
             return EMPTY_DATAFRAME
 
     @staticmethod
@@ -185,8 +187,10 @@ class FileUtil:
             FileUtil.dump_xml(df, file_path, **kwargs)
         elif "parquet" == file_format:
             return df.to_parquet(file_path, **kwargs)
+        elif "feather" == file_format:
+            return df.to_feather(file_path, **kwargs)
         else:
-            logger.error("File format {ext} is not supported")
+            logger.error(f"File format {ext} is not supported")
 
     @staticmethod
     def dump_csv(df: pd.DataFrame, file_or_filename, **kwargs) -> None:

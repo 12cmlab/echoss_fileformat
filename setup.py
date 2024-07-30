@@ -2,10 +2,10 @@ from setuptools import setup, find_packages
 
 setup(
     name="echoss_fileformat",
-    version="1.1.4",
+    version="1.1.5",
     author="12cm",
     author_email="your.email@12cm.com",
-    description="File format handler packages for JSON, CSV, XML, and Excel files.",
+    description="File format handler packages for JSON, CSV, XML, and Excel files",
     long_description=open('README.md').read(),
     long_description_content_type="text/markdown",
     url="",
