@@ -435,6 +435,7 @@ class XmlHandler(FileformatBase):
             config (dict): config dictionary
             tag (str): wrapping root tag
             file_path (str): file path to write
+
         """
         if len(config) == 1 and tag is None:
             for k, v in config.items():

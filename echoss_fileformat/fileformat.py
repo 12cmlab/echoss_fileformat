@@ -4,7 +4,7 @@
 import io
 import os
 import pandas as pd
-from typing import Union, Literal, Optional
+from typing import Union, Literal, Optional, Dict, Any
 import wcwidth
 import yaml
 import json
@@ -44,6 +44,10 @@ class FileUtil:
         pass
 
     @staticmethod
+    def supported_file_formats():
+        return ["csv", "tsv", "xlsx", "xls", "json"]
+
+    @staticmethod
     def load(file_path: str, file_format=None, **kwargs) -> pd.DataFrame:
         """파일에서 데이터 읽기
 
@@ -61,7 +65,7 @@ class FileUtil:
             return FileUtil.load_csv(file_path, **kwargs)
         elif "tsv" == file_format:
             return FileUtil.load_tsv(file_path, **kwargs)
-        elif ".xls" == file_format:
+        elif "xls" == file_format:
             return FileUtil.load_xls(file_path, **kwargs)
         elif "xlsx" == file_format:
             return FileUtil.load_xlsx(file_path, **kwargs)
@@ -76,75 +80,130 @@ class FileUtil:
         elif "feather" == file_format:
             return pd.read_feather(file_path, **kwargs)
         else:
-            logger.error(f"File format {ext} is not supported")
+            logger.error(f"File {file_path} format {file_format} is not supported")
             return EMPTY_DATAFRAME
 
     @staticmethod
     def load_csv(file_or_filename, **kwargs) -> pd.DataFrame:
-        processing_type = kwargs.pop('processing_type', 'object')
-        handler = CsvHandler(processing_type=processing_type)
+        handler = FileUtil._init_csv_handler(kwargs)
         df = handler.load(file_or_filename, **kwargs)
         return df
 
     @staticmethod
-    def load_tsv(file_or_filename, **kwargs) -> pd.DataFrame:
+    def _init_csv_handler(kwargs):
+        # processing_type='array', encoding='utf-8',
+        # delimiter=',', quotechar='"', quoting=0, escapechar='\\'
         processing_type = kwargs.pop('processing_type', 'object')
-        kwargs.pop('delimiter')
-        handler = CsvHandler(processing_type=processing_type, delimiter='\t')
+        encoding = kwargs.pop('encoding', 'utf-8')
+        delimiter = kwargs.pop('delimiter', ',')
+        quotechar = kwargs.pop('quotechar', '"')
+        quoting = kwargs.pop('quoting', 0)
+        escapechar = kwargs.pop('escapechar', '\\')
+        handler = CsvHandler(
+            processing_type=processing_type,
+            encoding=encoding,
+            delimiter=delimiter,
+            quotechar=quotechar,
+            quoting=quoting,
+            escapechar=escapechar
+        )
+        return handler
+
+    @staticmethod
+    def load_tsv(file_or_filename, **kwargs) -> pd.DataFrame:
+        kwargs['delimiter'] = '\t'
+        handler = FileUtil._init_csv_handler(kwargs)
         df = handler.load(file_or_filename, **kwargs)
         return df
 
     @staticmethod
     def load_xlsx(file_path: str, **kwargs) -> pd.DataFrame:
-        processing_type = kwargs.pop('processing_type', 'object')
-        kwargs.pop('engine')
+        handler = FileUtil._init_excelhandler(kwargs)
         new_engine = 'openpyxl'
-        handler = ExcelHandler(processing_type=processing_type)
-        handler.load(file_path, engine=new_engine, **kwargs)
-        df = handler.to_pandas()
+        df = handler.load(file_path, engine=new_engine, **kwargs)
         return df
 
     @staticmethod
-    def load_xls(file_path: str, **kwargs) -> pd.DataFrame:
+    def _init_excelhandler(kwargs):
+        # processing_type: str = 'array', encoding='utf-8',
         processing_type = kwargs.pop('processing_type', 'object')
-        handler = ExcelHandler(processing_type=processing_type)
-        kwargs.pop('engine')
+        encoding = kwargs.pop('encoding', 'utf-8')
+        handler = ExcelHandler(
+            processing_type=processing_type,
+            encoding=encoding
+        )
+        kwargs.pop('engine', 'openpyxl')
+        return handler
+
+    @staticmethod
+    def load_xls(file_path: str, **kwargs) -> pd.DataFrame:
+        handler = FileUtil._init_excelhandler(kwargs)
         old_engine = 'xlrd'
-        handler.load(file_path, engine=old_engine, **kwargs)
-        df = handler.to_pandas()
+        df = handler.load(file_path, engine=old_engine, **kwargs)
         return df
 
     @staticmethod
     def load_feather(file_path: str, **kwargs) -> pd.DataFrame:
-        processing_type = kwargs.pop('processing_type', 'object')
-        handler = FeatherHandler(processing_type=processing_type)
+        handler = FileUtil._init_featherhandler(kwargs)
         handler.load(file_path, **kwargs)
         df = handler.to_pandas()
         return df
+
+    @staticmethod
+    def _init_featherhandler(kwargs):
+        # processing_type: str = 'array', encoding='utf-8',
+        processing_type = kwargs.pop('processing_type', 'object')
+        encoding = kwargs.pop('encoding', 'utf-8')
+        handler = FeatherHandler(
+            processing_type=processing_type,
+            encoding=encoding
+        )
+        return handler
 
     @staticmethod
     def load_json(file_path: str, **kwargs) -> pd.DataFrame:
-        processing_type = kwargs.pop('processing_type', 'object')
-        handler = JsonHandler(processing_type=processing_type)
+        handler = FileUtil._init_jsonhandler(kwargs)
         handler.load(file_path, **kwargs)
         df = handler.to_pandas()
         return df
 
     @staticmethod
+    def _init_jsonhandler(kwargs):
+        # processing_type: str = 'array', encoding='utf-8',
+        processing_type = kwargs.pop('processing_type', 'object')
+        encoding = kwargs.pop('encoding', 'utf-8')
+        handler = JsonHandler(
+            processing_type=processing_type,
+            encoding=encoding
+        )
+        return handler
+
+    @staticmethod
     def load_jsonl(file_path: str, **kwargs) -> pd.DataFrame:
-        processing_type = kwargs.pop('processing_type', 'multiline')
-        handler = JsonHandler(processing_type='multiline')
+        kwargs['processing_type'] = 'multiline'
+        handler = FileUtil._init_jsonhandler(kwargs)
         handler.load(file_path, **kwargs)
         df = handler.to_pandas()
         return df
 
     @staticmethod
     def load_xml(file_path: str, **kwargs) -> pd.DataFrame:
-        processing_type = kwargs.pop('processing_type', 'object')
-        handler = XmlHandler(processing_type=processing_type)
+        handler = FileUtil._init_xmlhandler(kwargs)
         handler.load(file_path, **kwargs)
         df = handler.to_pandas()
         return df
+
+    @staticmethod
+    def _init_xmlhandler(kwargs):
+        # processing_type: str = 'array', encoding='utf-8',
+        processing_type = kwargs.pop('processing_type', 'object')
+        encoding = kwargs.pop('encoding', 'utf-8')
+        handler = XmlHandler(
+            processing_type=processing_type,
+            encoding=encoding
+        )
+        return handler
+
 
     """
     dump dataframe to file format
@@ -190,72 +249,67 @@ class FileUtil:
         elif "feather" == file_format:
             return df.to_feather(file_path, **kwargs)
         else:
-            logger.error(f"File format {ext} is not supported")
+            logger.error(f"File {file_path} format {file_format} is not supported")
 
     @staticmethod
     def dump_csv(df: pd.DataFrame, file_or_filename, **kwargs) -> None:
-        processing_type = kwargs.pop('processing_type', 'object')
-        handler = CsvHandler(processing_type=processing_type)
+        handler = FileUtil._init_csv_handler(kwargs)
         handler.dump(file_or_filename, data=df, **kwargs)
 
     @staticmethod
     def dump_tsv(df: pd.DataFrame, file_or_filename, **kwargs) -> None:
-        processing_type = kwargs.pop('processing_type', 'object')
-        kwargs.pop('delimiter')
-        handler = CsvHandler(processing_type=processing_type, delimiter='\t')
+        kwargs['delimiter'] = '\t'
+        handler = FileUtil._init_csv_handler(kwargs)
         handler.dump(file_or_filename, data=df, **kwargs)
 
     @staticmethod
     def dump_xls(df: pd.DataFrame, file_or_filename, **kwargs) -> None:
-        processing_type = kwargs.pop('processing_type', 'object')
-        handler = ExcelHandler(processing_type=processing_type)
-        kwargs.pop('engine')
+        handler = FileUtil._init_excelhandler(kwargs)
         old_engine = 'xlrd'
         handler.dump(file_or_filename, data=df, engine=old_engine, **kwargs)
 
     @staticmethod
     def dump_xlsx(df: pd.DataFrame, file_or_filename, **kwargs) -> None:
-        processing_type = kwargs.pop('processing_type', 'object')
-        handler = ExcelHandler(processing_type=processing_type)
-        kwargs.pop('engine')
+        handler = FileUtil._init_excelhandler(kwargs)
         new_engine = 'openpyxl'
         handler.dump(file_or_filename, data=df, engine=new_engine, **kwargs)
 
     @staticmethod
     def dump_feather(df: pd.DataFrame, file_or_filename, **kwargs) -> None:
-        processing_type = kwargs.pop('processing_type', 'object')
-        handler = FeatherHandler(processing_type=processing_type)
+        handler = FileUtil._init_featherhandler(kwargs)
         handler.dump(file_or_filename, data=df, **kwargs)
 
     @staticmethod
     def dump_json(df: pd.DataFrame, file_or_filename, **kwargs) -> None:
-        processing_type = kwargs.pop('processing_type', 'object')
-        handler = JsonHandler(processing_type=processing_type)
+        kwargs['processing_type'] = 'object'
+        handler = FileUtil._init_jsonhandler(kwargs)
         handler.dump(file_or_filename, data=df, **kwargs)
 
     @staticmethod
     def dump_jsonl(df: pd.DataFrame, file_or_filename, **kwargs) -> None:
-        processing_type = kwargs.pop('processing_type', 'multiline')
-        handler = JsonHandler(processing_type='multiline')
+        kwargs['processing_type'] = 'multiline'
+        handler = FileUtil._init_jsonhandler(kwargs)
         handler.dump(file_or_filename, data=df, **kwargs)
 
     @staticmethod
     def dump_xml(df: pd.DataFrame, file_or_filename, **kwargs) -> None:
         processing_type = kwargs.pop('processing_type', 'object')
-        handler = XmlHandler(processing_type=processing_type)
+        handler = FileUtil._init_xmlhandler(kwargs)
         handler.dump(file_or_filename, data=df, **kwargs)
 
     """
     load/dump config file 
     """
     @staticmethod
-    def dict_load(file_path: str, file_format: str = None) -> dict:
+    def dict_load(file_path: str, file_format: str = None, **kwargs) -> dict:
         """config file read to dict
 
         Args:
             file_path (str): 파일명
             file_format : file extension name to read
-
+            kwargs : keyword arguments
+        Return:
+            dict
         """
         if file_format is None:
             _, ext = os.path.splitext(file_path)
@@ -269,11 +323,11 @@ class FileUtil:
                 yaml_dict = yaml.safe_load(f)
                 return yaml_dict
         elif "json" == file_format:
-            handler = JsonHandler(processing_type='object')
+            handler = FileUtil._init_jsonhandler(kwargs)
             json_dict = handler.load(file_path)
             return json_dict
         elif "xml" == file_format:
-            handler = XmlHandler(processing_type='object')
+            handler = FileUtil._init_xmlhandler(kwargs)
             root = handler.load(file_path)
             xml_dict = handler.xml_to_dict(root)
             return xml_dict
@@ -298,7 +352,7 @@ class FileUtil:
             return EMPTY_DICT
 
     @staticmethod
-    def dict_dump(config: dict, file_path: str, file_format=None, force_write=True, xml_tag=None):
+    def dict_dump(config: dict, file_path: str, file_format=None, force_write=True, xml_tag=None, **kwargs):
         """config dict write to file
 
         Args:
@@ -307,6 +361,7 @@ class FileUtil:
             file_format : file extension name to use
             force_write : if True overwrite exist file or just return
             xml_tag (str) : root tag to wrapping dictionary
+            kwargs : keyword arguments
         """
         if file_format is None:
             _, ext = os.path.splitext(file_path)
@@ -321,9 +376,10 @@ class FileUtil:
                 yaml.dump(config, f, default_style=False, allow_unicode=True)
         elif "json" == file_format:
             with open(file_path, 'w') as f:
-                json.dump(config, f, indent=4)
+                indent = kwargs.pop('indent', 4)
+                json.dump(config, f, indent=indent, **kwargs)
         elif "xml" == file_format:
-            handler = XmlHandler(processing_type='object')
+            handler = FileUtil._init_xmlhandler(kwargs)
             handler.dict_dump(config, xml_tag, file_path)
         elif 'properties' == file_format:
             parser = configparser.ConfigParser()
@@ -358,9 +414,12 @@ class FileUtil:
     v_marker = '|'
     h_marker = '-'
     c_marker = '+'
+    use_row_line = True
 
     @staticmethod
     def to_table(df: pd.DataFrame, index=True, max_cols=16, max_rows=10, col_space=4, max_colwidth=24):
+        if index:
+            df = df.reset_index()
         df = FileUtil._split_rows(df, max_rows)
         df = FileUtil._split_columns(df, max_cols)
         df = FileUtil._preprocess_dataframe(df)
@@ -387,16 +446,18 @@ class FileUtil:
             row = [FileUtil._adjust_width(str(df.iloc[i, j]), col_widths[df.columns[j]]) for j in
                    range(len(df.columns))]
             row_line = f' {FileUtil.v_marker} '.join(row)
-            lines.append(f'{FileUtil.v_marker} ' + row_line + f' {FileUtil.v_marker}')
+            if FileUtil.use_row_line:
+                lines.append(f'{FileUtil.v_marker} ' + row_line + f' {FileUtil.v_marker}')
             lines.append(border_line)
 
         return '\n' + '\n'.join(lines) + '\n'
 
     @staticmethod
-    def set_markers(vertical='|', horizontal='-', corner='+'):
+    def set_markers(vertical='|', horizontal='-', corner='+', use_row_line=True):
         FileUtil.v_marker = vertical
         FileUtil.h_marker = horizontal
         FileUtil.c_marker = corner
+        FileUtil.use_row_line = use_row_line
 
     @staticmethod
     def _adjust_width(s: str, width: int):
@@ -442,8 +503,7 @@ class FileUtil:
             half_max_rows = max_rows // 2
             top_part = df.iloc[:half_max_rows]
             bottom_part = df.iloc[-half_max_rows:]
-            middle_row = pd.DataFrame({col: ['...'] for col in df.columns}, index=[half_max_rows])
-            middle_row.columns = df.columns
+            middle_row = pd.DataFrame([['...'] * len(df.columns)], columns=df.columns, index=[half_max_rows])
             df = pd.concat([top_part, middle_row, bottom_part])
         return df
 

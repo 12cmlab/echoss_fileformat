@@ -6,3 +6,4 @@ xlrd>=1.2.0
 pyarrow<16,>=4.0.0
 wcwidth>=0.2.13
 lxml>=5.0.1
+pyyaml

@@ -2,7 +2,7 @@ from setuptools import setup, find_packages
 
 setup(
     name="echoss_fileformat",
-    version="1.1.5",
+    version="1.1.9",
     author="12cm",
     author_email="your.email@12cm.com",
     description="File format handler packages for JSON, CSV, XML, and Excel files",
@@ -28,6 +28,7 @@ setup(
         "openpyxl>=3.1.0",
         "xlrd>=1.2.0",
         "wcwidth>=0.2.13",
-        "lxml>=5.0.1"
+        "lxml>=5.0.1",
+        "pyyaml"
     ]
 )
