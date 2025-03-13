@@ -417,12 +417,34 @@ class FileUtil:
     use_row_line = True
 
     @staticmethod
-    def to_table(df: pd.DataFrame, index=True, max_cols=16, max_rows=10, col_space=4, max_colwidth=24):
+    def to_table(df: pd.DataFrame, index=True, max_cols=16, max_rows=10, col_space=4, max_colwidth=24, fmt='grid'):
+        """table like string output for dataframe
+
+        Args:
+            df (pd.DataFrame): dataframe
+            index (bool): include index as output
+            max_cols (int) : max columns
+            max_rows (int) : max rows
+            col_space (int) : base column width
+            max_colwidth (int) : maximum column with
+            fmt (str): format one of 'grid', 'box', 'markdown'
+        """
         if index:
             df = df.reset_index()
         df = FileUtil._split_rows(df, max_rows)
         df = FileUtil._split_columns(df, max_cols)
         df = FileUtil._preprocess_dataframe(df)
+
+        fmt = fmt.lower()
+        if fmt == 'markdown':
+            FileUtil.c_marker = '|'
+            FileUtil. use_row_line = False
+        elif fmt == 'box':
+            FileUtil.c_marker = '+'
+            FileUtil. use_row_line = False
+        else:
+            FileUtil.c_marker = '+'
+            FileUtil. use_row_line = True
 
         # Calculate the widths for each column
         col_widths = {}
@@ -439,15 +461,22 @@ class FileUtil:
             [FileUtil.h_marker * (col_widths[col] + 2) for col in df.columns]) + FileUtil.c_marker
 
         # Create the formatted table
-        lines = [border_line, f'{FileUtil.v_marker} ' + header_line + f' {FileUtil.v_marker}', border_line]
+        if fmt == 'markdown':
+            lines = [f'{FileUtil.v_marker} ' + header_line + f' {FileUtil.v_marker}', border_line]
+        elif fmt == 'box':
+            lines = [border_line, f'{FileUtil.v_marker} ' + header_line + f' {FileUtil.v_marker}']
+        else:
+            lines = [border_line, f'{FileUtil.v_marker} ' + header_line + f' {FileUtil.v_marker}', border_line]
 
         # Create table rows
         for i in range(len(df)):
             row = [FileUtil._adjust_width(str(df.iloc[i, j]), col_widths[df.columns[j]]) for j in
                    range(len(df.columns))]
             row_line = f' {FileUtil.v_marker} '.join(row)
+            lines.append(f'{FileUtil.v_marker} ' + row_line + f' {FileUtil.v_marker}')
             if FileUtil.use_row_line:
-                lines.append(f'{FileUtil.v_marker} ' + row_line + f' {FileUtil.v_marker}')
+                lines.append(border_line)
+        if fmt == 'box':
             lines.append(border_line)
 
         return '\n' + '\n'.join(lines) + '\n'

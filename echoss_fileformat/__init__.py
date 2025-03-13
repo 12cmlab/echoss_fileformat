@@ -1,5 +1,5 @@
 # for v1.1
-from .echoss_logger import get_logger, set_logger_level
+from .echoss_logger import get_logger, use_logger, LOG_FORMAT_DETAIL, set_logger_level, modify_loggers_by_prefix
 from .fileformat import FileUtil
 
 from .fileformat_base import FileformatBase

@@ -84,7 +84,7 @@ class FileUtilTestCase(unittest.TestCase):
 
             if open_mode in ['r']:
                 # PandasUtil.set_markers(vertical='#', horizontal='=', corner='*')
-                logger.info(f"read_df = {to_table(read_df, max_cols=8)}")
+                logger.info(f"read_df = {to_table(read_df, max_cols=8, fmt='markdown')}")
 
                 logger.info(f"assertEqual({len(line_list)}, 15)")
                 # self.assertEqual(len(line_list), 15)
@@ -103,7 +103,7 @@ class FileUtilTestCase(unittest.TestCase):
             csv_df = FileUtil.load(load_filename, header=0, skiprows=0)
             if csv_df is not None:
                 if verbose:
-                    logger.info(to_table(csv_df.head(10)))
+                    logger.info(to_table(csv_df.head(10), fmt='box'))
             else:
                 logger.info('empty dataframe')
 
@@ -261,6 +261,8 @@ class FileUtilTestCase(unittest.TestCase):
 
         # Assert
         self.assertDictEqual(config_dict, reload_dict, "is same or not?")
+
+
 
 if __name__ == '__main__':
     unittest.main(verbosity=2)

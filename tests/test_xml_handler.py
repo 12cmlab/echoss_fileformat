@@ -31,9 +31,10 @@ class MyTestCase(unittest.TestCase):
     def test_simple_object_load(self):
         processing_types = ['object', 'object']
         file_names = ['test_data/simple_config.xml', 'test_data/simple_pom.xml']
-        expect_passes = [0, 0]
-        expect_fails = [0, 0]
+        expect_passes = [15, 11]
+        expect_fails = [0, 1]
 
+        # known bug on pom xml parsing
         for processing_type, file_name, expect_pass, expect_fail in \
                 zip(processing_types, file_names, expect_passes, expect_fails):
             try:

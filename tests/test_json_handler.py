@@ -3,7 +3,7 @@ import time
 import logging
 import os
 
-from echoss_fileformat import JsonHandler
+from echoss_fileformat import JsonHandler, FeatherHandler
 from echoss_fileformat import get_logger, to_table
 
 logger = get_logger(logger_name='test_json_handler', backup_count=1)

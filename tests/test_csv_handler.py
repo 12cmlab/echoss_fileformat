@@ -4,9 +4,9 @@ import os
 import pandas as pd
 
 from echoss_fileformat import CsvHandler
-from echoss_fileformat import echoss_logger, to_table
+from echoss_fileformat import echoss_logger, to_table, LOG_FORMAT_DETAIL
 
-logger = echoss_logger.get_logger("test_csv_handler", backup_count=1)
+logger = echoss_logger.get_logger("test_csv_handler", backup_count=1, logger_format=LOG_FORMAT_DETAIL)
 verbose = True
 
 

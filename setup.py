@@ -2,7 +2,7 @@ from setuptools import setup, find_packages
 
 setup(
     name="echoss_fileformat",
-    version="1.1.9",
+    version="1.2.1",
     author="12cm",
     author_email="your.email@12cm.com",
     description="File format handler packages for JSON, CSV, XML, and Excel files",

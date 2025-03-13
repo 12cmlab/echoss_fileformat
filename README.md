@@ -6,7 +6,8 @@ This project provides file format handler packages for JSON, CSV, XML, and Excel
 
 ## Version History
 - v1.0 : Object method
-- v1.1 : static method 
+- v1.1 : static method
+- v1.2 : stable updated 
 
 ## Installation
 

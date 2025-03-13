@@ -1,15 +1,17 @@
 import logging
+from logging.handlers import TimedRotatingFileHandler
 import os
 import sys
-from logging.handlers import TimedRotatingFileHandler
+from typing import Optional
 
-LOG_FORMAT = "%(asctime)s %(levelname)-5s - %(name)s : %(message)s"
-LOG_FILE = "echoss.log"
+LOG_FORMAT = "[%(asctime)s.%(msecs)03d] %(levelname)-7s %(name)s : %(message)s"
+LOG_FORMAT_DETAIL = "[%(asctime)s.%(msecs)03d] %(levelname)-7s %(module)s.%(funcName)s.%(lineno)d : %(message)s"
+DATE_FORMAT = "%Y-%m-%d %H:%M:%S"
+
+LOG_FILE = "logs/echoss.log"
+
 # Set environment variable for Python IO encoding
 os.environ["PYTHONIOENCODING"] = "utf-8"
-# Set stdout and stderr to UTF-8 encoding
-# sys.stdout = open(sys.stdout.fileno(), mode='w', encoding='utf-8', buffering=1)
-# sys.stderr = open(sys.stderr.fileno(), mode='w', encoding='utf-8', buffering=1)
 
 
 def _get_console_handler(formatter):
@@ -24,23 +26,44 @@ def _get_file_handler(formatter, file_path, backup_count):
     file_handler.setFormatter(formatter)
     return file_handler
 
+def use_logger(logger_name='echoss'):
+    """get parent logger in submodule python script
+    :param logger_name: logger name
 
-def get_logger(logger_name='echoss', logger_format=LOG_FORMAT, file_path=LOG_FILE, backup_count=0, use_console=True):
+    :returns: logger of logger_name
+    :raises RuntimeError when logger_name is not made
     """
-    create new echoss logger or replace old
+    logger = logging.getLogger(logger_name)
+
+    if logger.hasHandlers():
+        return logger
+    else:
+        raise RuntimeError(f"{logger_name} is not created yet")
+
+def get_logger(logger_name='echoss', logger_format=LOG_FORMAT, file_path=LOG_FILE, backup_count=0,
+               use_console=True, level="DEBUG"):
+    """
+    create new echoss logger or replace old logger
     :param logger_name: logger name
     :param logger_format: logging format
     :param file_path: file path if File logging else None
     :param backup_count: if 0 keep all timed rotating log files, else only keep backup count number of files
     :param use_console: use console output or not
+    :param level:  (str or int) set logging level
+
     :returns: generated logger
     :raises None
     """
     logger = logging.getLogger(logger_name)
-    formatter = logging.Formatter(logger_format)
-    logger.setLevel(logging.DEBUG)  # better to have too much log than not enough
+    formatter = logging.Formatter(logger_format, datefmt=DATE_FORMAT)
+    set_logger_level(logger, level)
     # with this pattern, it's rarely necessary to propagate the error up to parent
     logger.propagate = False
+
+    # make file_path parent directory
+    parent_dir = os.path.dirname(file_path)
+    if parent_dir:
+        os.makedirs(parent_dir, exist_ok=True)
 
     # Update or add console handler
     has_console_handler = False
@@ -94,3 +117,34 @@ def set_logger_level(logger, level):
         raise TypeError("Level must be an integer or string")
 
     logger.setLevel(numeric_level)
+
+
+def modify_loggers_by_prefix(prefix, new_format: str=LOG_FORMAT, new_path: str=LOG_FILE,
+                             backup_count: int=0, use_console=True, level="DEBUG"):
+    """
+    Modify loggers that logger name starting with a specific prefix.
+    :param prefix: prefix of lgger name
+    :param new_format: new logging format
+    :param new_path: new file path if File logging else None
+    :param backup_count: if 0 keep all timed rotating log files, else only keep backup count number of files
+    :param use_console: use console output or not
+    :param level: set logging level by level name or level number
+    :return: first logger
+    :raises None
+    """
+
+    # Iterate over all loggers in the logging manager
+    is_first = True
+    first_logger = None
+    for logger_name in logging.Logger.manager.loggerDict.keys():
+        if logger_name.startswith(prefix):
+            current_logger = get_logger(logger_name, logger_format=new_format, file_path=new_path,
+                       backup_count=backup_count, use_console=use_console, level=level)
+
+            if is_first:
+                is_first = False
+                first_logger = current_logger
+            if backup_count != 0:
+                backup_count = 0
+
+    return first_logger
