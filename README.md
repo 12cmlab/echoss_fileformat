@@ -1,4 +1,4 @@
-# echoss_fileformat v1.1
+# echoss_fileformat v1.2.1
 
 # File Format Handlers
 

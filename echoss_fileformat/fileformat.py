@@ -1,14 +1,16 @@
 """
     echoss AI Bigdata Center Solution - file format utilty (static version)
 """
+import configparser
 import io
+import json
+import numpy as np
 import os
 import pandas as pd
-from typing import Union, Literal, Optional, Dict, Any
+from typing import Union, Literal, Optional, Dict, List, Any
+import unicodedata
 import wcwidth
 import yaml
-import json
-import configparser
 
 from echoss_fileformat.csv_handler import CsvHandler
 from echoss_fileformat.echoss_logger import get_logger
@@ -417,11 +419,11 @@ class FileUtil:
     use_row_line = True
 
     @staticmethod
-    def to_table(df: pd.DataFrame, index=True, max_cols=16, max_rows=10, col_space=4, max_colwidth=24, fmt='grid'):
+    def to_table(data: Any, index=True, max_cols=16, max_rows=10, col_space=4, max_colwidth=24, fmt='grid'):
         """table like string output for dataframe
 
         Args:
-            df (pd.DataFrame): dataframe
+            data (Any): dataframe or object convertible to DataFrame
             index (bool): include index as output
             max_cols (int) : max columns
             max_rows (int) : max rows
@@ -429,55 +431,33 @@ class FileUtil:
             max_colwidth (int) : maximum column with
             fmt (str): format one of 'grid', 'box', 'markdown'
         """
+        if isinstance(data, pd.DataFrame):
+            df = data
+        else:
+            try:
+                df = pd.DataFrame(data)
+            except Exception as e:
+                logger.error(f"data is type of {type(data)} and not convertible to DataFrame: {e}")
+                return ""
+
         if index:
             df = df.reset_index()
+
         df = FileUtil._split_rows(df, max_rows)
         df = FileUtil._split_columns(df, max_cols)
-        df = FileUtil._preprocess_dataframe(df)
 
+        df = df.astype(str)
+        df = FileUtil._clean_dataframe(df)
+
+        # Set table format markers
         fmt = fmt.lower()
-        if fmt == 'markdown':
-            FileUtil.c_marker = '|'
-            FileUtil. use_row_line = False
-        elif fmt == 'box':
-            FileUtil.c_marker = '+'
-            FileUtil. use_row_line = False
-        else:
-            FileUtil.c_marker = '+'
-            FileUtil. use_row_line = True
+        FileUtil._set_format(fmt)
 
-        # Calculate the widths for each column
-        col_widths = {}
-        for col in df.columns:
-            max_data_width = df[col].astype(str).apply(wcwidth.wcswidth).max()
-            head_width = wcwidth.wcswidth(str(col))
-            col_widths[col] = min(max(max_data_width, head_width), max_colwidth)
-            col_widths[col] = max(col_widths[col], col_space)
+        # Compute column widths
+        col_widths = FileUtil._calculate_col_widths(df, col_space, max_colwidth)
 
-        # Create the table header
-        header = [FileUtil._adjust_width(str(col), col_widths[col]) for col in df.columns]
-        header_line = f' {FileUtil.v_marker} '.join(header)
-        border_line = FileUtil.c_marker + FileUtil.c_marker.join(
-            [FileUtil.h_marker * (col_widths[col] + 2) for col in df.columns]) + FileUtil.c_marker
-
-        # Create the formatted table
-        if fmt == 'markdown':
-            lines = [f'{FileUtil.v_marker} ' + header_line + f' {FileUtil.v_marker}', border_line]
-        elif fmt == 'box':
-            lines = [border_line, f'{FileUtil.v_marker} ' + header_line + f' {FileUtil.v_marker}']
-        else:
-            lines = [border_line, f'{FileUtil.v_marker} ' + header_line + f' {FileUtil.v_marker}', border_line]
-
-        # Create table rows
-        for i in range(len(df)):
-            row = [FileUtil._adjust_width(str(df.iloc[i, j]), col_widths[df.columns[j]]) for j in
-                   range(len(df.columns))]
-            row_line = f' {FileUtil.v_marker} '.join(row)
-            lines.append(f'{FileUtil.v_marker} ' + row_line + f' {FileUtil.v_marker}')
-            if FileUtil.use_row_line:
-                lines.append(border_line)
-        if fmt == 'box':
-            lines.append(border_line)
+        # Generate formatted table
+        lines = FileUtil._generate_table(df, col_widths, fmt)
 
         return '\n' + '\n'.join(lines) + '\n'
 
@@ -489,33 +469,122 @@ class FileUtil:
         FileUtil.use_row_line = use_row_line
 
     @staticmethod
-    def _adjust_width(s: str, width: int):
-        try:
-            display_width = wcwidth.wcswidth(s)
-            if display_width <= width:
-                return s + ' ' * (width - display_width)
-
-            for i in range(width//2-3, len(s)):
-                current_width = wcwidth.wcswidth(s[:i])
-                if current_width > width - 3:
-                    remaining_width = width - current_width
-                    return s[:i] + '.' * remaining_width
-        except Exception as e:
-            logger.error(f"Exception adjust_width({s=}, {width=})")
-
-        return s[:width - 3] + '...'
+    def _set_format(fmt):
+        """Set markers and line usage based on table format"""
+        if fmt == 'markdown':
+            FileUtil.set_markers('|', '-', '|', False)
+        elif fmt == 'box':
+            FileUtil.set_markers('|', '-', '+', False)
+        else:
+            FileUtil.set_markers('|', '-', '+', True)
 
     @staticmethod
-    def _preprocess_dataframe(df):
-        # 특수 문자를 \\n 등으로 변환
-        def clean_text(text):
-            if isinstance(text, str):
-                text = text.replace('\r\n', '\\n').replace('\r', '\\n').replace('\n', '\\n')
-                text = text.replace('\t', '\\t').replace('\x0b', ' ').replace('\x0c', ' ')
-                text = text.replace('\u200b', '')
-            return text
-        df = df.map(clean_text)
-        return df
+    def _safe_wcswidth(value: str, default_width: int = 4) -> int:
+        """Safely compute the display width of text using wcwidth.wcswidth()"""
+        try:
+            return max(wcwidth.wcswidth(value), default_width)
+        except Exception as e:
+            logger.warning(f"Failed to compute width for text: {value}: {e}")
+            return default_width
+
+    @staticmethod
+    def _safe_wcswidth_2(value: str, default_width: int = 4) -> int:
+        """Safely compute the display width of text using wcwidth.wcswidth()"""
+        try:
+            width = 0
+            for char in value:
+                if unicodedata.east_asian_width(char) in ('F', 'W'):
+                    width += 2
+                else:
+                    width += 1
+
+            return max(width, default_width)
+        except Exception as e:
+            logger.warning(f"Failed to compute width for text: {value}: {e}")
+            return default_width
+
+    @staticmethod
+    def _calculate_col_widths(df: pd.DataFrame, col_space: int, max_colwidth: int) -> Dict[str, int]:
+        """Calculate column widths based on data and column names"""
+        col_widths = {}
+        # Determine final column width by value width and header width
+        for col in df.columns:
+            max_data_width = max(FileUtil._safe_wcswidth(x, col_space) for x in df[col])
+            head_width = FileUtil._safe_wcswidth(str(col), col_space)
+            col_widths[col] = min(max(max_data_width, head_width), max_colwidth)
+        return col_widths
+
+    @staticmethod
+    def _adjust_width(s: str, width: int) -> str:
+        """Adjusts text width to fit within a given width."""
+        display_width = FileUtil._safe_wcswidth(s, 0)
+
+        if display_width <= width:
+            filled_str = s + ' ' * (width - display_width)
+            return filled_str
+
+        safe_index = width // 2 - 3
+        current_width = 0
+        try:
+            if safe_index > 0:
+                current_width = FileUtil._safe_wcswidth(s[:safe_index], 0)
+            else:
+                safe_index = 0
+
+            while safe_index < len(s):
+                char_width = FileUtil._safe_wcswidth(s[safe_index], 0)
+                if current_width + char_width >= width - 3:
+                    break
+                current_width += char_width
+                safe_index += 1
+        except Exception as e:
+            logger.error(f"Exception adjust_width({s=}, {width=}) : {e}")
+
+        return s[:safe_index] + '.' * (width - current_width)
+
+    @staticmethod
+    def _generate_table(df: pd.DataFrame, col_widths: Dict[str, int], fmt: str) -> List[str]:
+        """Format table rows and assemble the table"""
+
+        """Create table header and border lines"""
+        header = [FileUtil._adjust_width(str(col), col_widths[col]) for col in df.columns]
+        header_line = f' {FileUtil.v_marker} '.join(header)
+        border_line = FileUtil.c_marker + FileUtil.c_marker.join(
+            [FileUtil.h_marker * (col_widths[col] + 2) for col in df.columns]
+        ) + FileUtil.c_marker
+
+        if fmt == 'markdown':
+            lines = [f'{FileUtil.v_marker} {header_line} {FileUtil.v_marker}', border_line]
+        elif fmt == 'box':
+            lines = [border_line, f'{FileUtil.v_marker} {header_line} {FileUtil.v_marker}']
+        else:
+            lines = [border_line, f'{FileUtil.v_marker} {header_line} {FileUtil.v_marker}', border_line]
+
+        for row in df.itertuples(index=False):  # faster iteration
+            cells = [FileUtil._adjust_width(getattr(row, col), col_widths[col]) for col in df.columns]
+            row_line = f' {FileUtil.v_marker} '.join(cells)
+            lines.append(f'{FileUtil.v_marker} {row_line} {FileUtil.v_marker}')
+            if FileUtil.use_row_line:
+                lines.append(border_line)
+
+        if fmt == 'box' and not FileUtil.use_row_line:
+            lines.append(border_line)
+
+        return lines
+
+    @staticmethod
+    def _clean_dataframe(df: pd.DataFrame) -> pd.DataFrame:
+        """벡터화된 방식으로 특수 문자 처리"""
+        replacements = {
+            '\r\n': '\\n',
+            '\r': '\\n',
+            '\n': '\\n',
+            '\t': '\\t',
+            '\x0b': ' ',
+            '\x0c': ' ',
+            '\u200b': ''
+        }
+        return df.replace(replacements)
 
     @staticmethod
     def _split_columns(df, max_cols):
